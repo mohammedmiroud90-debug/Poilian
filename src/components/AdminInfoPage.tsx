@@ -1,0 +1,2 @@
+import Link from "next/link";
+export function AdminInfoPage({ eyebrow, title, description, links }: { eyebrow: string; title: string; description: string; links?: [string, string][] }) { return <section className="admin-info"><p className="section-label">{eyebrow}</p><h1>{title}</h1><p>{description}</p>{links?.length ? <div>{links.map(([href, label]) => <Link href={href} key={href}>{label} →</Link>)}</div> : null}</section>; }
