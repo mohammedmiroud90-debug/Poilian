@@ -3,6 +3,7 @@ import "./globals.css";
 import { CookieBanner } from "@/components/CookieBanner";
 import { BlogFooter } from "@/components/BlogFooter";
 import { AutoTranslate } from "@/components/AutoTranslate";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://poilian.com"),
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}<BlogFooter /><CookieBanner /><AutoTranslate /></body>
+      <body>{children}<BlogFooter /><CookieBanner /><AutoTranslate /><AnalyticsTracker /></body>
     </html>
   );
 }

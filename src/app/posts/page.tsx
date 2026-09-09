@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BlogHeader } from "@/components/BlogHeader";
 import { getPosts } from "@/lib/parse";
 import { postsInCategory } from "@/lib/categories";
+import { getAuthorProfile } from "@/lib/profile";
 
 const perPage = 6;
 export default async function PostsPage({
@@ -10,6 +11,7 @@ export default async function PostsPage({
   searchParams: Promise<{ query?: string; category?: string; page?: string }>;
 }) {
   const { query = "", category = "", page: pageValue = "1" } = await searchParams;
+  const authorProfile = await getAuthorProfile();
   const term = query.trim().toLowerCase();
   const categoryPosts = category ? postsInCategory(await getPosts(), category) : await getPosts();
   const allPosts = categoryPosts.filter(
@@ -49,7 +51,7 @@ export default async function PostsPage({
                   month: "long",
                   day: "numeric",
                 })}{" "}
-                · {post.author}
+                · {authorProfile.name || post.author}
               </p>
               <small>/en/posts/{post.slug}/</small>
             </li>

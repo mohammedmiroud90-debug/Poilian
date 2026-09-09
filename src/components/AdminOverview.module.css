@@ -1,0 +1,13 @@
+.welcome { display: flex; min-height: 158px; align-items: center; justify-content: space-between; gap: 28px; font-family: "Haskoy", Arial, sans-serif; }
+.welcome h1 { font-family: "Haskoy", Arial, sans-serif !important; font-size: clamp(29px, 3.2vw, 40px) !important; font-weight: 600 !important; letter-spacing: -.04em !important; }
+.welcome > div { max-width: 630px; }
+.robot { width: min(220px, 26vw); flex: 0 0 auto; color: #101a25; }
+.cards { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 14px !important; border: 0 !important; background: transparent !important; }
+.card { display: flex !important; min-height: 246px !important; flex-direction: column; justify-content: space-between; border: 1px solid #dce1e6 !important; border-radius: 2px !important; padding: 27px 24px 24px !important; background: #fff !important; box-shadow: none !important; color: #101316 !important; font-family: "Haskoy", Arial, sans-serif; transition: border-color .18s ease, background .18s ease !important; }
+.card:hover { border-color: #8d98a4 !important; background: #fafbfc !important; box-shadow: none !important; transform: none !important; }
+.icon { display: grid !important; width: auto !important; height: auto !important; margin: 0 !important; place-items: start !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; color: #090b0d !important; }
+.icon svg { width: 42px !important; height: 42px !important; stroke-width: 1.45 !important; }
+.cardCopy h2 { margin: 25px 0 8px !important; color: #101316 !important; font-family: "Haskoy", Arial, sans-serif !important; font-size: 19px !important; font-weight: 600 !important; letter-spacing: -.02em !important; }
+.cardCopy p { margin: 0 !important; color: #65707c !important; font-family: "Haskoy", Arial, sans-serif !important; font-size: 13px !important; line-height: 1.55 !important; }
+@media (max-width: 1050px) and (min-width: 701px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }.card { min-height: 220px !important; } }
+@media (max-width: 700px) { .welcome { min-height: 0; align-items: flex-start; }.robot { width: 112px; margin-top: 4px; }.welcome h1 { font-size: 30px !important; }.cards { grid-template-columns: 1fr !important; gap: 12px !important; }.card { min-height: 180px !important; padding: 22px !important; }.icon svg { width: 38px !important; height: 38px !important; }.cardCopy h2 { margin-top: 19px !important; } }

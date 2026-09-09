@@ -11,13 +11,15 @@ import { CodeBlock } from "@/components/CodeBlock";
 import { InlinePostEditor } from "@/components/InlinePostEditor";
 import { currentAdmin } from "@/lib/admin";
 import { getComments, getPost, getPosts } from "@/lib/parse";
+import { getAuthorProfile } from "@/lib/profile";
 
 type Block = {
-  kind: "heading" | "paragraph" | "quote" | "code" | "unordered" | "ordered";
+  kind: "heading" | "paragraph" | "quote" | "code" | "unordered" | "ordered" | "image";
   value: string;
   level?: number;
   items?: string[];
   id?: string;
+  alt?: string;
 };
 const idFrom = (value: string, index: number) =>
   `${
@@ -51,6 +53,12 @@ function parseBlocks(content: string): Block[] {
         code.push(lines[index++]);
       if (index < lines.length) index++;
       blocks.push({ kind: "code", value: code.join("\n") });
+      continue;
+    }
+    const image = line.match(/^!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)$/);
+    if (image) {
+      blocks.push({ kind: "image", value: image[2], alt: image[1] });
+      index++;
       continue;
     }
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
@@ -128,8 +136,9 @@ export default async function PostPage({
   if (!post) notFound();
   const admin = await currentAdmin();
   const allPosts = await getPosts();
+  const authorProfile = await getAuthorProfile();
   const similarPosts = allPosts.filter((item) => item.slug !== post.slug).sort((first, second) => Number(second.category === post.category) - Number(first.category === post.category)).slice(0, 5);
-  const authorPostCount = allPosts.filter((item) => item.author === post.author).length;
+  const authorPostCount = allPosts.filter((item) => item.author === authorProfile.name || item.author === post.author).length;
   const comments = await getComments(post.id);
   const blocks = parseBlocks(post.content);
   const headings = blocks.filter(
@@ -150,6 +159,7 @@ export default async function PostPage({
           );
         }
         if (block.kind === "code") return <CodeBlock code={block.value} key={index} />;
+        if (block.kind === "image") return <figure className="post-image" key={index}><img src={block.value} alt={block.alt || ""} loading="lazy" />{block.alt && <figcaption>{block.alt}</figcaption>}</figure>;
         if (block.kind === "unordered")
           return (
             <ul key={index}>
@@ -194,10 +204,10 @@ export default async function PostPage({
           ← All posts
         </Link>
         <div className="author-profile">
-          <Image className="author-avatar" src="https://founder.brintiel.com/static/images/profile-pic.png" alt={`Portrait of ${post.author}`} width={27} height={27} />
+          <img className="author-avatar" src={authorProfile.avatarUrl} alt={`Portrait of ${authorProfile.name}`} width={27} height={27} />
           <span>Written by</span>
-          <strong>{post.author}</strong>
-          <aside className="author-hover-card" aria-label={`About ${post.author}`}><b>{authorPostCount} {authorPostCount === 1 ? "post" : "posts"}</b><span>More writing from {post.author}.</span><a href="https://www.linkedin.com" target="_blank" rel="noreferrer">LinkedIn profile <i aria-hidden="true">↗</i></a></aside>
+          <strong>{authorProfile.name}</strong>
+          <aside className="author-hover-card" aria-label={`About ${authorProfile.name}`}><b>{authorPostCount} {authorPostCount === 1 ? "post" : "posts"}</b><span>{authorProfile.bio}</span><a href={authorProfile.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn profile <i aria-hidden="true">↗</i></a></aside>
         </div>
         <p className="post-meta">
           {post.category} · {new Date(post.publishedAt).toLocaleDateString()}
@@ -224,7 +234,7 @@ export default async function PostPage({
           article
         )}
         {similarPosts.length > 0 && <section className="similar-posts" aria-labelledby="similar-posts-title"><p className="section-label">KEEP READING</p><h2 id="similar-posts-title">Similar posts</h2><div>{similarPosts.map((item) => <Link href={`/posts/${item.slug}`} key={item.id}>{item.title} <span aria-hidden="true">↗</span></Link>)}</div></section>}
-        <PostAuthor author={post.author} />
+        <PostAuthor author={authorProfile.name} bio={authorProfile.bio} avatarUrl={authorProfile.avatarUrl} />
         <CommentSection postId={post.id} initialComments={comments} />
       </main>
     </>

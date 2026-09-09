@@ -26,5 +26,11 @@
 			"id": "ebaf454475134890b55b83f363360168",
 			"remote": true
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "R2_AVATARS",
+			"bucket_name": "bucketblog"
+		}
 	]
 }

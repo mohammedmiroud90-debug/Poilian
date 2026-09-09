@@ -3,15 +3,30 @@
 import { useEffect } from "react";
 import type { Locale } from "@/components/LanguageSelect";
 
-const selector = "main h1, main h2, main h3, main h4, main p, main li, main blockquote, main a, main button, main label, main small, main span, .personal-footer p, .personal-footer a, .personal-footer h3";
-const excluded = "script,style,pre,code,svg,.language-select,.rich-editor,.toolbar,.poilian-locale-copy";
+const excluded = "script,style,pre,code,svg,.language-select,.rich-editor,.toolbar,.poilian-locale-copy,.poilian-admin";
+const translatableArea = "main, .personal-footer";
 
 function isLocale(value: string | null): value is Locale { return value === "en" || value === "fr" || value === "ar"; }
+function splitWhitespace(value: string) { return { leading: value.match(/^\s*/)?.[0] ?? "", text: value.trim(), trailing: value.match(/\s*$/)?.[0] ?? "" }; }
 
 export function AutoTranslate() {
   useEffect(() => {
     let cancelled = false;
     let requestId = 0;
+    const sources = new WeakMap<Text, string>();
+
+    const collect = () => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const nodes: Text[] = [];
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        const textNode = node as Text;
+        const parent = textNode.parentElement;
+        if (!parent?.closest(translatableArea) || parent.closest(excluded) || !textNode.nodeValue?.trim()) continue;
+        nodes.push(textNode);
+      }
+      return nodes;
+    };
 
     async function applyLocale(requestedLocale?: Locale) {
       const currentRequest = ++requestId;
@@ -20,24 +35,24 @@ export function AutoTranslate() {
       document.documentElement.lang = locale;
       document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
 
-      const elements = Array.from(document.querySelectorAll<HTMLElement>(selector)).filter((element) => {
-        if (element.closest(excluded) || !element.textContent?.trim()) return false;
-        if (element.dataset.poilianSource) element.textContent = element.dataset.poilianSource;
-        return element.children.length === 0 || element.matches("a");
-      });
+      const items = collect().map((node) => {
+        const source = sources.get(node) ?? node.nodeValue ?? "";
+        sources.set(node, source);
+        node.nodeValue = source;
+        return { node, source };
+      }).filter(({ source }) => splitWhitespace(source).text);
       if (locale === "en") return;
 
-      const originals = elements.map((element) => element.textContent?.trim() || "");
-      for (let start = 0; start < originals.length; start += 50) {
+      for (let start = 0; start < items.length; start += 50) {
+        const batch = items.slice(start, start + 50);
         try {
-          const response = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale, texts: originals.slice(start, start + 50) }) });
+          const response = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale, texts: batch.map(({ source }) => splitWhitespace(source).text) }) });
           const data = await response.json() as { translations?: string[] };
           (data.translations ?? []).forEach((translation, index) => {
-            const element = elements[start + index];
-            const original = originals[start + index];
-            if (cancelled || currentRequest !== requestId || !element || !translation || translation === original) return;
-            element.dataset.poilianSource = original;
-            element.textContent = translation;
+            const item = batch[index];
+            if (cancelled || currentRequest !== requestId || !item || !translation) return;
+            const { leading, trailing } = splitWhitespace(item.source);
+            item.node.nodeValue = `${leading}${translation}${trailing}`;
           });
         } catch { /* Preserve the original content when translation is unavailable. */ }
       }

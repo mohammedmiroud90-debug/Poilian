@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "./AdminOverview.module.css";
 
 type IconName = "posts" | "pages" | "comments" | "settings";
 
@@ -12,6 +13,10 @@ function Icon({ name }: { name: IconName }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
 
+function DashboardRobot() {
+  return <svg className={styles.robot} viewBox="0 0 230 170" role="img" aria-label="A small robotic dashboard assistant"><g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M89 34V20h52v14" strokeWidth="3"/><rect x="72" y="34" width="86" height="60" rx="11" strokeWidth="3"/><circle cx="96" cy="61" r="4" fill="currentColor"/><circle cx="134" cy="61" r="4" fill="currentColor"/><path d="M101 77c9 7 19 7 28 0M84 107h62v33a22 22 0 0 1-22 22h-18a22 22 0 0 1-22-22Z" strokeWidth="3"/><path d="M94 120h42M105 134h20m-10-14v28M79 110c-17 2-27 14-30 30m96-30c17 2 27 14 30 30M95 159l-18 10m52-10 18 10" strokeWidth="3"/><path d="M25 52h24v56H25zM31 64h12m-12 12h12m-12 12h12M181 52h24v56h-24zM187 64h12m-12 12h12m-12 12h12M54 122h17m88 0h17" strokeWidth="2"/><path d="M52 33l10-12m106 12-10-12M104 20l-5-11m32 11 5-11" strokeWidth="2"/></g></svg>;
+}
+
 const workspaces: { title: string; description: string; href: string; icon: IconName }[] = [
   { title: "Manage posts", description: "Create, edit, and publish your articles.", href: "/admin/posts", icon: "posts" },
   { title: "Manage pages", description: "Update the public pages across your website.", href: "/admin/pages", icon: "pages" },
@@ -22,17 +27,16 @@ const workspaces: { title: string; description: string; href: string; icon: Icon
 export function AdminOverview() {
   return (
     <section className="admin-home">
-      <header className="admin-home-intro">
-        <p className="section-label">POILIAN ADMIN</p>
-        <h1>Manage your website.</h1>
-        <p>Choose a workspace to create, update, and keep your website running smoothly.</p>
+      <header className={`${styles.welcome} admin-home-intro`}>
+        <div><p className="section-label">POILIAN ADMIN</p><h1>Manage your website.</h1><p>Choose a workspace to create, update, and keep your website running smoothly.</p></div>
+        <DashboardRobot />
       </header>
 
-      <div className="admin-home-cards">
+      <div className={`${styles.cards} admin-home-cards`}>
         {workspaces.map((workspace) => (
-          <Link href={workspace.href} key={workspace.href} className="admin-home-card">
-            <span className="admin-home-icon"><Icon name={workspace.icon} /></span>
-            <div>
+          <Link href={workspace.href} key={workspace.href} className={`${styles.card} admin-home-card`}>
+            <span className={`${styles.icon} admin-home-icon`}><Icon name={workspace.icon} /></span>
+            <div className={styles.cardCopy}>
               <h2>{workspace.title}</h2>
               <p>{workspace.description}</p>
             </div>

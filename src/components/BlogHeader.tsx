@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { LanguageSelect, type Locale } from "@/components/LanguageSelect";
 
@@ -14,6 +15,7 @@ const paths = ["/en", "/posts", "/projects", "/research", "/about", "/contact"];
 type NavigationPage = { slug: string; navigationLabel: string };
 
 export function BlogHeader({ pages: initialPages = [] }: { pages?: NavigationPage[] }) {
+  const pathname = usePathname();
   const [pages, setPages] = useState<NavigationPage[]>(initialPages);
   const [locale, setLocale] = useState<Locale>("en");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -29,7 +31,7 @@ export function BlogHeader({ pages: initialPages = [] }: { pages?: NavigationPag
   function search(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const term = query.trim(); window.location.assign(term ? `/posts?query=${encodeURIComponent(term)}` : "/posts"); }
   function closeMenu() { setMenuOpen(false); }
 
-  return <header className={`page-header poilian-locale-copy${scrolled ? " is-scrolled" : ""}`} dir={locale === "ar" ? "rtl" : "ltr"}>
+  return <header className={`page-header poilian-locale-copy${scrolled ? " is-scrolled" : ""}${pathname.startsWith("/posts/") ? " post-header" : ""}`} dir={locale === "ar" ? "rtl" : "ltr"}>
     <div className="page-header-top page-shell">
       <Link className="page-header-logo" href="/en"><Image src="/brand.png" alt="Poilian" width={155} height={64} priority /></Link>
       <div className="header-utilities">

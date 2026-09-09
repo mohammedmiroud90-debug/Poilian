@@ -1,7 +1,45 @@
 "use client";
-import Image from "next/image";
+
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Locale } from "@/components/LanguageSelect";
-const copy: Record<Locale, { description: string; legal: string[] }> = { en: { description: "Stories, research and local insight from Algeria.", legal: ["Legal", "Privacy", "Accessibility", "Security", "Terms of Service", "Admin login"] }, fr: { description: "Récits, recherches et perspectives locales depuis l’Algérie.", legal: ["Mentions légales", "Confidentialité", "Accessibilité", "Sécurité", "Conditions d’utilisation", "Connexion administrateur"] }, ar: { description: "قصص وأبحاث ورؤى محلية من الجزائر.", legal: ["المعلومات القانونية", "الخصوصية", "إمكانية الوصول", "الأمان", "شروط الخدمة", "دخول الإدارة"] } };
-export function BlogFooter() { const [locale, setLocale] = useState<Locale>("en"); useEffect(() => { const update = (next?: Locale) => { const saved = next || localStorage.getItem("poilian-locale"); if (saved === "en" || saved === "fr" || saved === "ar") setLocale(saved); }; update(); const listener = (event: Event) => update((event as CustomEvent<Locale>).detail); window.addEventListener("poilian-locale-change", listener); return () => window.removeEventListener("poilian-locale-change", listener); }, []); const text = copy[locale]; return <footer className="personal-footer poilian-locale-copy" dir={locale === "ar" ? "rtl" : "ltr"}><div className="reference-footer"><Link className="reference-footer-logo" href="/en" aria-label="Poilian home"><Image src="/brand.png" alt="Poilian" width={190} height={78} /></Link><p>{text.description}</p><nav className="reference-footer-social" aria-label="Social channels"><a href="#facebook" aria-label="Facebook">f</a><a href="#x" aria-label="X">𝕏</a><a href="#youtube" aria-label="YouTube">▶</a><a href="https://www.linkedin.com" aria-label="LinkedIn">in</a><a href="#instagram" aria-label="Instagram">◎</a></nav><nav className="reference-footer-links" aria-label="Legal links"><Link href="/legal">{text.legal[0]}</Link><Link href="/privacy">{text.legal[1]}</Link><Link href="/accessibility">{text.legal[2]}</Link><Link href="/security">{text.legal[3]}</Link><Link href="/terms">{text.legal[4]}</Link><Link className="footer-admin-login" href="/admin">{text.legal[5]}</Link></nav><p className="reference-footer-copyright">© 2026 Belhachemia Mohammed. {locale === "ar" ? "جميع الحقوق محفوظة." : locale === "fr" ? "Tous droits réservés." : "All Rights Reserved."}</p></div></footer>; }
+
+const copy: Record<Locale, { description: string; admin: string; rights: string }> = {
+  en: { description: "Stories, research and local insight from Algeria.", admin: "Admin login", rights: "All Rights Reserved." },
+  fr: { description: "Récits, recherches et perspectives locales depuis l’Algérie.", admin: "Connexion administrateur", rights: "Tous droits réservés." },
+  ar: { description: "قصص وأبحاث ورؤى محلية من الجزائر.", admin: "دخول الإدارة", rights: "جميع الحقوق محفوظة." },
+};
+
+export function BlogFooter() {
+  const [locale, setLocale] = useState<Locale>("en");
+  useEffect(() => {
+    const update = (next?: Locale) => {
+      const saved = next || localStorage.getItem("poilian-locale");
+      if (saved === "en" || saved === "fr" || saved === "ar") setLocale(saved);
+    };
+    update();
+    const listener = (event: Event) => update((event as CustomEvent<Locale>).detail);
+    window.addEventListener("poilian-locale-change", listener);
+    return () => window.removeEventListener("poilian-locale-change", listener);
+  }, []);
+  const text = copy[locale];
+  return <footer className="personal-footer poilian-locale-copy reference-footer-wrap" dir={locale === "ar" ? "rtl" : "ltr"}>
+    <div className="reference-footer">
+      <div className="reference-footer-top">
+        <div className="reference-footer-brand"><Link className="reference-footer-logo" href="/en" aria-label="Poilian home"><Image src="/brand.png" alt="Poilian" width={180} height={74} /></Link><p>{text.description}</p></div>
+        <div className="reference-footer-navs">
+          <nav className="reference-footer-links" aria-label="Site links">
+            <Link href="/en">Home</Link><Link href="/posts">Posts</Link><Link href="/projects">Projects</Link>
+            <Link href="/about">About</Link><Link href="/contact">Contact</Link><Link className="footer-admin-login" href="/admin">{text.admin}</Link>
+          </nav>
+          <nav className="reference-footer-social" aria-label="Social channels">
+            <a href="https://www.linkedin.com">LinkedIn ↗</a><a href="#x">X / Twitter ↗</a><a href="#instagram">Instagram ↗</a>
+          </nav>
+        </div>
+      </div>
+      <div className="reference-footer-meta"><p>Built with care in Algeria.</p><p className="reference-footer-copyright">© 2026 Belhachemia Mohammed. {text.rights}</p></div>
+    </div>
+    <div className="reference-footer-photo" role="img" aria-label="Footer visual" />
+  </footer>;
+}
