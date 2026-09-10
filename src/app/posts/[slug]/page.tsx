@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = await getPost(slug);
   if (!post) return { title: "Post not found | Poilian", robots: { index: false, follow: false } };
   const description = post.excerpt || `Read ${post.title} on Poilian.`;
-  return { title: `${post.title} | Poilian`, description, alternates: { canonical: `/posts/${post.slug}` }, openGraph: { type: "article", url: `/posts/${post.slug}`, title: post.title, description, siteName: "Poilian", publishedTime: post.publishedAt, authors: [post.author], images: [{ url: "/brand.png", width: 1200, height: 630, alt: post.title }] }, twitter: { card: "summary_large_image", title: post.title, description, images: ["/brand.png"] } };
+  return { title: `${post.title} | Poilian`, description, alternates: { canonical: `/posts/${post.slug}` }, openGraph: { type: "article", url: `/posts/${post.slug}`, title: post.title, description, siteName: "Poilian", publishedTime: post.publishedAt, authors: [post.author], images: [{ url: "/TankBL.png", width: 466, height: 143, alt: "TankBL" }] }, twitter: { card: "summary_large_image", title: post.title, description, images: ["/TankBL.png"] } };
 }
 function parseBlocks(content: string): Block[] {
   const lines = content.replace(/\r\n?/g, "\n").split("\n");
@@ -146,6 +146,7 @@ export default async function PostPage({
       block.kind === "heading" && Boolean(block.id),
   );
   const tags = post.category.split(/[,/|]/).map((tag) => tag.trim()).filter(Boolean);
+  const usesTanklager = ["cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats", "the-devops-handbook-revisited-modern-practices-for-continuous-delivery"].includes(post.slug);
   const article = (
     <article className="post-body">
       {blocks.map((block, index) => {
@@ -196,7 +197,7 @@ export default async function PostPage({
   );
   return (
     <>
-      <BlogHeader />
+      <BlogHeader category={post.slug === "cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats" ? post.category : undefined} />
       <main className="content-page post-page">
         <PostTools title={post.title} />
         {admin && <InlinePostEditor post={post} />}
@@ -212,23 +213,18 @@ export default async function PostPage({
         <p className="post-meta">
           {post.category} · {new Date(post.publishedAt).toLocaleDateString()}
         </p>
-        <div className="post-tags" aria-label="Article tags">
+        <div className={`post-tags${usesTanklager ? " tanklager-tags" : ""}`} aria-label="Article tags">
           {tags.map((tag) => <Link href={`/posts?category=${encodeURIComponent(tag)}`} key={tag}>#{tag}</Link>)}
         </div>
-        <h1>{post.title}</h1>
+        <h1 className={usesTanklager ? "tanklager-title" : undefined}>{post.title}</h1>
         <p className="page-intro">{post.excerpt}</p>
         {headings.length > 1 ? (
           <section className="post-reading-layout">
             {article}
-            <aside className="post-toc-sidebar">
-              <ArticleToc
-                headings={headings.map(({ id, value, level }) => ({
-                  id: id!,
-                  value,
-                  level,
-                }))}
-              />
-            </aside>
+            <div className="post-reading-sidebar">
+              <aside className="post-toc-sidebar"><ArticleToc headings={headings.map(({ id, value, level }) => ({ id: id!, value, level }))} /></aside>
+              <aside className="post-promotion-sidebar" aria-label="Promotion"><a className="toc-promotion" href="/contact" aria-label="Get in touch with Poilian"><img src={authorProfile.promotionImage} alt="Discover more from Poilian" /><span>Work with Poilian <b aria-hidden="true">↗</b></span></a></aside>
+            </div>
           </section>
         ) : (
           article

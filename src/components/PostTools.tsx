@@ -10,12 +10,16 @@ export function PostTools({ title }: { title: string }) {
   useEffect(() => {
     setUrl(window.location.href);
     const update = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pageHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+      const max = pageHeight - window.innerHeight;
       setProgress(max > 0 ? Math.min(100, Math.round((window.scrollY / max) * 100)) : 0);
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    const observer = new ResizeObserver(update);
+    observer.observe(document.body);
+    return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); observer.disconnect(); };
   }, []);
 
   const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;

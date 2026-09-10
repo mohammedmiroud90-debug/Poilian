@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 const cache = new Map<string, string>();
 const supported = new Set(["fr", "ar"]);
 const chunkSize = 1200;
+const maxBatchSize = 20;
+const maxParallelRequests = 5;
 
 function chunks(value: string) {
   const result: string[] = [];
@@ -38,10 +40,24 @@ async function translateChunk(source: string, locale: string) {
   return result || source;
 }
 
+async function translateBatch(texts: string[], locale: string) {
+  const translations = new Array<string>(texts.length);
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < texts.length) {
+      const index = nextIndex++;
+      try { translations[index] = await translate(texts[index], locale); }
+      catch { translations[index] = texts[index]; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(maxParallelRequests, texts.length) }, worker));
+  return translations;
+}
+
 export async function POST(request: Request) {
   const { locale, texts } = await request.json() as { locale?: string; texts?: unknown };
   if (!locale || !supported.has(locale) || !Array.isArray(texts)) return NextResponse.json({ translations: [] });
-  const unique = texts.slice(0, 50).map((item) => typeof item === "string" ? item : "");
-  const translations = await Promise.all(unique.map(async (text) => { try { return await translate(text, locale); } catch { return text; } }));
+  const unique = texts.slice(0, maxBatchSize).map((item) => typeof item === "string" ? item : "");
+  const translations = await translateBatch(unique, locale);
   return NextResponse.json({ translations });
 }

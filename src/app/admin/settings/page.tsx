@@ -1,2 +1,7 @@
-import { AdminInfoPage } from "@/components/AdminInfoPage";
-export default function SettingsPage() { return <AdminInfoPage eyebrow="SITE SETTINGS" title="Poilian settings" description="Your Poilian logo, blue dashboard design, public pages, and projects are ready. Connection and administrator settings are managed through your Parse environment variables and user record." links={[["/admin/pages", "Manage public pages"], ["/admin/projects", "Manage project showcase"]]} />; }
+import { SettingsManager } from "@/components/SettingsManager";
+import { getAuthorProfile } from "@/lib/profile";
+
+export default async function SettingsPage() {
+  const profile = await getAuthorProfile();
+  return <SettingsManager initialImage={profile.promotionImage} />;
+}

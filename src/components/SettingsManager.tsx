@@ -1,0 +1,11 @@
+"use client";
+
+import { ChangeEvent, FormEvent, useState } from "react";
+import { defaultPromotionImage } from "@/lib/promotion";
+
+export function SettingsManager({ initialImage }: { initialImage: string }) {
+  const [image, setImage] = useState(initialImage || defaultPromotionImage); const [notice, setNotice] = useState(""); const [uploading, setUploading] = useState(false);
+  async function save(next = image) { setNotice("Saving…"); const response = await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ promotionImage: next }) }); const result = await response.json() as { error?: string }; setNotice(response.ok ? "Banner image saved. It is now live below article tables of contents." : result.error || "Image could not be saved."); }
+  async function upload(event: ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; setUploading(true); setNotice("Uploading image…"); const form = new FormData(); form.set("image", file); const response = await fetch("/api/admin/profile/upload", { method: "POST", body: form }); const result = await response.json() as { url?: string; error?: string }; if (response.ok && result.url) { setImage(result.url); await save(result.url); } else setNotice(result.error || "Image upload failed."); setUploading(false); event.target.value = ""; }
+  return <section className="admin-list-page settings-manager"><header className="admin-page-title"><div><p className="section-label">SITE SETTINGS</p><h1>Promotional banner</h1><p>Choose the image shown below every article table of contents.</p></div></header><form onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); void save(); }}><div className="settings-banner-preview"><img src={image} alt="Article promotional banner preview" /></div><label>Banner image URL<input type="url" value={image} onChange={(event) => setImage(event.target.value)} required /></label><label className="settings-upload">Upload a new banner image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={upload} disabled={uploading} /><span>{uploading ? "Uploading…" : "Choose image"}</span></label><footer><small>{notice}</small><button disabled={uploading}>Save banner</button></footer></form></section>;
+}

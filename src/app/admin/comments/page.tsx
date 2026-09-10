@@ -1,2 +1,9 @@
+import { AdminComments } from "@/components/AdminComments";
 import { getComments, getPosts } from "@/lib/parse";
-export default async function AdminCommentsPage() { const posts = await getPosts(); const entries = (await Promise.all(posts.map(async (post) => (await getComments(post.id)).map((comment) => ({ ...comment, post: post.title }))))).flat(); return <section className="admin-list-page"><div className="admin-page-title"><div><p className="section-label">MODERATION</p><h1>Comments</h1><p>Reader responses published on your articles.</p></div></div><div className="admin-data-list">{entries.length ? entries.map((comment) => <article key={comment.id}><div><strong>{comment.author}</strong><span>On {comment.post} · {new Date(comment.createdAt).toLocaleDateString()}</span><p>{comment.content}</p></div></article>) : <p className="admin-empty">No comments yet.</p>}</div></section>; }
+import { getAuthorProfile } from "@/lib/profile";
+
+export default async function AdminCommentsPage() {
+  const [posts, profile] = await Promise.all([getPosts(), getAuthorProfile()]);
+  const entries = (await Promise.all(posts.map(async (post) => (await getComments(post.id)).map((comment) => ({ ...comment, post: post.title, postId: post.id, slug: post.slug }))))).flat();
+  return <AdminComments initialEntries={entries} author={profile.name || "Poilian"} />;
+}

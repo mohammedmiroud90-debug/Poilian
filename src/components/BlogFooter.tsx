@@ -5,10 +5,10 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Locale } from "@/components/LanguageSelect";
 
-const copy: Record<Locale, { description: string; admin: string; rights: string }> = {
-  en: { description: "Stories, research and local insight from Algeria.", admin: "Admin login", rights: "All Rights Reserved." },
-  fr: { description: "Récits, recherches et perspectives locales depuis l’Algérie.", admin: "Connexion administrateur", rights: "Tous droits réservés." },
-  ar: { description: "قصص وأبحاث ورؤى محلية من الجزائر.", admin: "دخول الإدارة", rights: "جميع الحقوق محفوظة." },
+const copy: Record<Locale, { description: string; admin: string; rights: string; links: [string, string, string, string, string] }> = {
+  en: { description: "Stories, research and local insight from Algeria.", admin: "Admin login", rights: "All Rights Reserved.", links: ["Home", "Posts", "Projects", "About", "Contact"] },
+  fr: { description: "Récits, recherches et perspectives locales depuis l’Algérie.", admin: "Connexion administrateur", rights: "Tous droits réservés.", links: ["Accueil", "Articles", "Projets", "À propos", "Contact"] },
+  ar: { description: "قصص وأبحاث ورؤى محلية من الجزائر.", admin: "دخول الإدارة", rights: "جميع الحقوق محفوظة.", links: ["الرئيسية", "المقالات", "المشاريع", "من نحن", "اتصل بنا"] },
 };
 
 export function BlogFooter() {
@@ -27,11 +27,11 @@ export function BlogFooter() {
   return <footer className="personal-footer poilian-locale-copy reference-footer-wrap" dir={locale === "ar" ? "rtl" : "ltr"}>
     <div className="reference-footer">
       <div className="reference-footer-top">
-        <div className="reference-footer-brand"><Link className="reference-footer-logo" href="/en" aria-label="Poilian home"><Image src="/brand.png" alt="Poilian" width={180} height={74} /></Link><p>{text.description}</p></div>
+        <div className="reference-footer-brand"><Link className="reference-footer-logo" href="/en" aria-label="TankBL home"><Image src="/TankBL.png" alt="TankBL" width={180} height={74} /></Link><p>{text.description}</p></div>
         <div className="reference-footer-navs">
           <nav className="reference-footer-links" aria-label="Site links">
-            <Link href="/en">Home</Link><Link href="/posts">Posts</Link><Link href="/projects">Projects</Link>
-            <Link href="/about">About</Link><Link href="/contact">Contact</Link><Link className="footer-admin-login" href="/admin">{text.admin}</Link>
+            <Link href="/en">{text.links[0]}</Link><Link href="/posts">{text.links[1]}</Link><Link href="/projects">{text.links[2]}</Link>
+            <Link href="/about">{text.links[3]}</Link><Link href="/contact">{text.links[4]}</Link><Link className="footer-admin-login" href="/admin">{text.admin}</Link>
           </nav>
           <nav className="reference-footer-social" aria-label="Social channels">
             <a href="https://www.linkedin.com">LinkedIn ↗</a><a href="#x">X / Twitter ↗</a><a href="#instagram">Instagram ↗</a>

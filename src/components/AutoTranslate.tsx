@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import type { Locale } from "@/components/LanguageSelect";
 
 const excluded = "script,style,pre,code,svg,.language-select,.rich-editor,.toolbar,.poilian-locale-copy,.poilian-admin";
@@ -10,6 +11,8 @@ function isLocale(value: string | null): value is Locale { return value === "en"
 function splitWhitespace(value: string) { return { leading: value.match(/^\s*/)?.[0] ?? "", text: value.trim(), trailing: value.match(/\s*$/)?.[0] ?? "" }; }
 
 export function AutoTranslate() {
+  const pathname = usePathname();
+
   useEffect(() => {
     let cancelled = false;
     let requestId = 0;
@@ -43,10 +46,13 @@ export function AutoTranslate() {
       }).filter(({ source }) => splitWhitespace(source).text);
       if (locale === "en") return;
 
-      for (let start = 0; start < items.length; start += 50) {
-        const batch = items.slice(start, start + 50);
+      // Cloudflare Workers have a finite external-subrequest budget. Small
+      // batches keep a long page from losing a whole translation request.
+      for (let start = 0; start < items.length; start += 20) {
+        const batch = items.slice(start, start + 20);
         try {
           const response = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale, texts: batch.map(({ source }) => splitWhitespace(source).text) }) });
+          if (!response.ok) throw new Error("Translation request failed");
           const data = await response.json() as { translations?: string[] };
           (data.translations ?? []).forEach((translation, index) => {
             const item = batch[index];
@@ -58,10 +64,12 @@ export function AutoTranslate() {
       }
     }
 
-    void applyLocale();
+    // The root layout stays mounted after App Router navigation, so translate
+    // each newly-rendered route as well as the first page.
+    const frame = window.requestAnimationFrame(() => void applyLocale());
     const updateLocale = (event: Event) => void applyLocale((event as CustomEvent<Locale>).detail);
     window.addEventListener("poilian-locale-change", updateLocale);
-    return () => { cancelled = true; window.removeEventListener("poilian-locale-change", updateLocale); };
-  }, []);
+    return () => { cancelled = true; window.cancelAnimationFrame(frame); window.removeEventListener("poilian-locale-change", updateLocale); };
+  }, [pathname]);
   return null;
 }

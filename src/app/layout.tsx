@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   description: "Stories, guides and local insight for exploring Algeria.",
   applicationName: "Poilian",
   alternates: { canonical: "/" },
-  openGraph: { type: "website", locale: "en_US", url: "/", siteName: "Poilian", title: "Poilian Journal | Discover Algeria", description: "Stories, guides and local insight for exploring Algeria.", images: [{ url: "/brand.png", width: 1200, height: 630, alt: "Poilian" }] },
-  twitter: { card: "summary_large_image", title: "Poilian Journal | Discover Algeria", description: "Stories, guides and local insight for exploring Algeria.", images: ["/brand.png"] },
+  openGraph: { type: "website", locale: "en_US", url: "/", siteName: "Poilian", title: "Poilian Journal | Discover Algeria", description: "Stories, guides and local insight for exploring Algeria.", images: [{ url: "/TankBL.png", width: 466, height: 143, alt: "TankBL" }] },
+  twitter: { card: "summary_large_image", title: "Poilian Journal | Discover Algeria", description: "Stories, guides and local insight for exploring Algeria.", images: ["/TankBL.png"] },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
