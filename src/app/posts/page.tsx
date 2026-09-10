@@ -40,12 +40,15 @@ export default async function PostsPage({
             : "Notes, research and thoughtful writing from my personal journal."}
         </p>
         <ol className="academic-post-list" start={(page - 1) * perPage + 1}>
-          {posts.map((post) => (
+          {posts.map((post, index) => (
             <li key={post.id}>
+              <span className="post-index-number" aria-hidden="true">{String((page - 1) * perPage + index + 1).padStart(2, "0")}</span>
+              <article>
               <Link href={`/posts/${post.slug}`}>
                 {post.title} <span>↗</span>
               </Link>
-              <p>
+              <p className="post-index-excerpt">{post.excerpt || "Read the full story and reflections."}</p>
+              <p className="post-index-meta">
                 {new Date(post.publishedAt).toLocaleDateString(undefined, {
                   year: "numeric",
                   month: "long",
@@ -54,6 +57,7 @@ export default async function PostsPage({
                 · {authorProfile.name || post.author}
               </p>
               <small>/en/posts/{post.slug}/</small>
+              </article>
             </li>
           ))}
         </ol>
