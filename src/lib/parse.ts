@@ -1,4 +1,4 @@
-export type Post = { id: string; slug: string; title: string; excerpt: string; content: string; author: string; publishedAt: string; category: string; className?: "Article" | "BlogPost" };
+export type Post = { id: string; slug: string; title: string; excerpt: string; content: string; contentHtml?: string; author: string; publishedAt: string; category: string; className?: "Article" | "BlogPost" };
 export type Comment = { id: string; author: string; content: string; createdAt: string; parentId?: string };
 export type AnalyticsSummary = { posts: number; comments: number; views: number; viewsThisWeek: number; latestPost?: Post; topPosts: { title: string; slug: string; views: number }[]; activity: { date: string; views: number }[] };
 
@@ -20,8 +20,30 @@ const commentAuthor = (item: Record<string, unknown>) => {
   const index = Array.from(id).reduce((total, character) => total + character.charCodeAt(0), 0) % fallbackCommentAuthors.length;
   return fallbackCommentAuthors[index];
 };
+
+// Get raw HTML content (for rich editor posts)
+const getHtmlContent = (value: unknown) => typeof value === "string" ? value.trim() : "";
+
+// Convert HTML to markdown (for backward compatibility with markdown-based posts)
 const postContent = (value: unknown) => typeof value === "string" ? value.replace(/\\n/g, "\n").replace(/<pre[^>]*>\s*<code[^>]*>([\s\S]*?)<\/code>\s*<\/pre>/gi, "\n```\n$1\n```\n").replace(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*\balt=["']([^"']*)["'][^>]*>/gi, "\n![$2]($1)\n").replace(/<img\b[^>]*\balt=["']([^"']*)["'][^>]*\bsrc=["']([^"']+)["'][^>]*>/gi, "\n![$1]($2)\n").replace(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi, "\n![]($1)\n").replace(/<h([1-3])[^>]*>([\s\S]*?)<\/h\1>/gi, "\n## $2\n").replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n- $1").replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, "\n> $1\n").replace(/<br\s*\/?>/gi, "\n").replace(/<\/(?:p|div)>/gi, "\n").replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/\r\n?/g, "\n").trim() : "";
-const mapPost = (item: Record<string, unknown>, className?: "Article" | "BlogPost"): Post => ({ id: String(item.objectId), slug: text(item.slug) || String(item.objectId), title: text(item.title) || "Untitled post", excerpt: text(item.excerpt || item.summary || item.description), content: postContent(item.content || item.body || item.details), author: text(item.author) || "Belhachemia Mohammed", publishedAt: dateText(item.publishedAt) || dateText(item.createdAt) || new Date().toISOString(), category: text(item.category || item.type) || "Personal notes", className });
+
+const mapPost = (item: Record<string, unknown>, className?: "Article" | "BlogPost"): Post => {
+  const rawContent = item.content || item.body || item.details;
+  const htmlContent = getHtmlContent(rawContent);
+  
+  return {
+    id: String(item.objectId),
+    slug: text(item.slug) || String(item.objectId),
+    title: text(item.title) || "Untitled post",
+    excerpt: text(item.excerpt || item.summary || item.description),
+    content: postContent(rawContent), // Markdown for backward compatibility
+    contentHtml: htmlContent, // Raw HTML for rich editor posts
+    author: text(item.author) || "Belhachemia Mohammed",
+    publishedAt: dateText(item.publishedAt) || dateText(item.createdAt) || new Date().toISOString(),
+    category: text(item.category || item.type) || "Personal notes",
+    className
+  };
+};
 
 async function query(className: string, params: Record<string, string>) {
   if (!configured) return null;

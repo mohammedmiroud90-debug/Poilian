@@ -27,7 +27,7 @@ export function BlogFooter() {
   return <footer className="personal-footer poilian-locale-copy reference-footer-wrap" dir={locale === "ar" ? "rtl" : "ltr"}>
     <div className="reference-footer">
       <div className="reference-footer-top">
-        <div className="reference-footer-brand"><Link className="reference-footer-logo" href="/en" aria-label="TankBL home"><Image src="/TankBL.png" alt="TankBL" width={180} height={74} /></Link><p>{text.description}</p></div>
+        <div className="reference-footer-brand"><Link className="reference-footer-logo" href="/en" aria-label="Poilian home"><Image src="/Bitti.png" alt="Poilian" width={180} height={74} /></Link><p>{text.description}</p></div>
         <div className="reference-footer-navs">
           <nav className="reference-footer-links" aria-label="Site links">
             <Link href="/en">{text.links[0]}</Link><Link href="/posts">{text.links[1]}</Link><Link href="/projects">{text.links[2]}</Link>

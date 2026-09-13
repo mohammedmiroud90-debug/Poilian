@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = await getPost(slug);
   if (!post) return { title: "Post not found | Poilian", robots: { index: false, follow: false } };
   const description = post.excerpt || `Read ${post.title} on Poilian.`;
-  return { title: `${post.title} | Poilian`, description, alternates: { canonical: `/posts/${post.slug}` }, openGraph: { type: "article", url: `/posts/${post.slug}`, title: post.title, description, siteName: "Poilian", publishedTime: post.publishedAt, authors: [post.author], images: [{ url: "/TankBL.png", width: 466, height: 143, alt: "TankBL" }] }, twitter: { card: "summary_large_image", title: post.title, description, images: ["/TankBL.png"] } };
+  return { title: `${post.title} | Poilian`, description, alternates: { canonical: `/posts/${post.slug}` }, openGraph: { type: "article", url: `/posts/${post.slug}`, title: post.title, description, siteName: "Poilian", publishedTime: post.publishedAt, authors: [post.author], images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Poilian" }] }, twitter: { card: "summary_large_image", title: post.title, description, images: ["/Bitti.png"] } };
 }
 function parseBlocks(content: string): Block[] {
   const lines = content.replace(/\r\n?/g, "\n").split("\n");
@@ -140,14 +140,65 @@ export default async function PostPage({
   const similarPosts = allPosts.filter((item) => item.slug !== post.slug).sort((first, second) => Number(second.category === post.category) - Number(first.category === post.category)).slice(0, 5);
   const authorPostCount = allPosts.filter((item) => item.author === authorProfile.name || item.author === post.author).length;
   const comments = await getComments(post.id);
-  const blocks = parseBlocks(post.content);
-  const headings = blocks.filter(
-    (block): block is Block & { id: string } =>
-      block.kind === "heading" && Boolean(block.id),
-  );
+  
+  // Check if we have HTML content (from rich editor) or markdown content
+  const hasHtmlContent = post.contentHtml && post.contentHtml.includes('<');
+  
+  let blocks: Block[] = [];
+  let headings: (Block & { id: string })[] = [];
+  
+  if (hasHtmlContent) {
+    // Extract headings from HTML content for TOC
+    // Match h1, h2, h3, h4, h5, h6 tags
+    const headingMatches = [...(post.contentHtml?.matchAll(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi) || [])];
+    let headingIndex = 0;
+    headings = headingMatches.map(match => {
+      const level = parseInt(match[1]);
+      const value = match[2].replace(/<[^>]*>/g, ''); // Strip inner HTML tags
+      const id = idFrom(value, headingIndex++);
+      return { kind: "heading" as const, value, level, id };
+    });
+    
+    console.log('🔍 HTML Post Headings Debug:', {
+      slug: post.slug,
+      hasHtmlContent,
+      headingMatchesFound: headingMatches.length,
+      headings: headings.map(h => ({ level: h.level, value: h.value })),
+      contentPreview: post.contentHtml?.substring(0, 500)
+    });
+  } else {
+    blocks = parseBlocks(post.content);
+    headings = blocks.filter(
+      (block): block is Block & { id: string } =>
+        block.kind === "heading" && Boolean(block.id),
+    );
+  }
+  
+  // Ensure sidebar is shown (always render if there are headings OR force show for specific posts)
+  const shouldShowSidebar = headings.length > 0 || ["cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats"].includes(post.slug);
+  
   const tags = post.category.split(/[,/|]/).map((tag) => tag.trim()).filter(Boolean);
   const usesTanklager = ["cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats", "the-devops-handbook-revisited-modern-practices-for-continuous-delivery"].includes(post.slug);
-  const article = (
+  
+  // Add IDs to HTML headings for TOC navigation
+  let processedHtmlContent = post.contentHtml;
+  if (hasHtmlContent && headings.length > 0) {
+    let headingIndex = 0;
+    processedHtmlContent = post.contentHtml!.replace(/<h([1-6])([^>]*)>(.*?)<\/h\1>/gi, (match, level, attrs, content) => {
+      const heading = headings[headingIndex++];
+      if (heading && !attrs.includes('id=')) {
+        return `<h${level}${attrs} id="${heading.id}">${content}</h${level}>`;
+      }
+      return match;
+    });
+  }
+  
+  const article = hasHtmlContent ? (
+    <article 
+      className="post-body rich-post-content" 
+      dangerouslySetInnerHTML={{ __html: processedHtmlContent! }}
+    />
+  ) : (
     <article className="post-body">
       {blocks.map((block, index) => {
         if (block.kind === "heading") {
@@ -218,17 +269,17 @@ export default async function PostPage({
         </div>
         <h1 className={usesTanklager ? "tanklager-title" : undefined}>{post.title}</h1>
         <p className="page-intro">{post.excerpt}</p>
-        {headings.length > 1 ? (
-          <section className="post-reading-layout">
-            {article}
-            <div className="post-reading-sidebar">
-              <aside className="post-toc-sidebar"><ArticleToc headings={headings.map(({ id, value, level }) => ({ id: id!, value, level }))} /></aside>
-              <aside className="post-promotion-sidebar" aria-label="Promotion"><a className="toc-promotion" href="/contact" aria-label="Get in touch with Poilian"><img src={authorProfile.promotionImage} alt="Discover more from Poilian" /><span>Work with Poilian <b aria-hidden="true">↗</b></span></a></aside>
-            </div>
-          </section>
-        ) : (
-          article
-        )}
+        <section className="post-reading-layout">
+          {article}
+          <div className="post-reading-sidebar">
+            <aside className="post-toc-sidebar">
+              <ArticleToc headings={headings.length > 0 ? headings.map(({ id, value, level }) => ({ id: id!, value, level })) : []} />
+            </aside>
+            <aside className="post-publicity-banner">
+              <div className="post-publicity-banner-image" role="img" aria-label="Promotional banner" />
+            </aside>
+          </div>
+        </section>
         {similarPosts.length > 0 && <section className="similar-posts" aria-labelledby="similar-posts-title"><p className="section-label">KEEP READING</p><h2 id="similar-posts-title">Similar posts</h2><div>{similarPosts.map((item) => <Link href={`/posts/${item.slug}`} key={item.id}>{item.title} <span aria-hidden="true">↗</span></Link>)}</div></section>}
         <PostAuthor author={authorProfile.name} bio={authorProfile.bio} avatarUrl={authorProfile.avatarUrl} />
         <CommentSection postId={post.id} initialComments={comments} />

@@ -8,7 +8,7 @@ export default async function PersonalBlogHome() {
   const [posts, authorProfile] = await Promise.all([getPosts(), getAuthorProfile()]);
   return (
     <main className="personal-home">
-      <HomeHero />
+      <HomeHero authorAvatarUrl={authorProfile.avatarUrl} />
       <HomePostList posts={posts} authorName={authorProfile.name} />
       <HomeFooter />
     </main>
