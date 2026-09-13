@@ -12,7 +12,8 @@ export function PoilianLoader({
   const [isVisible, setIsVisible] = useState(show);
 
   useEffect(() => {
-    setIsVisible(show);
+    const timer = setTimeout(() => setIsVisible(show), 0);
+    return () => clearTimeout(timer);
   }, [show]);
 
   if (!isVisible) return null;
@@ -24,40 +25,13 @@ export function PoilianLoader({
       aria-label="Loading"
     >
       <div className="poilian-loader-content">
-        {/* Arabic text "جبال" with fading animation */}
-        <div className="poilian-loader-text">
-          <span className="poilian-loader-char" style={{ animationDelay: '0s' }}>ج</span>
-          <span className="poilian-loader-char" style={{ animationDelay: '0.2s' }}>ب</span>
-          <span className="poilian-loader-char" style={{ animationDelay: '0.4s' }}>ا</span>
-          <span className="poilian-loader-char" style={{ animationDelay: '0.6s' }}>ل</span>
-        </div>
-        
-        {/* Mountain SVG animation */}
-        <div className="poilian-loader-mountains">
-          <svg width="120" height="60" viewBox="0 0 120 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path 
-              className="mountain mountain-1"
-              d="M20 60 L40 20 L60 60 Z" 
-              fill="rgba(255, 255, 255, 0.3)"
-            />
-            <path 
-              className="mountain mountain-2"
-              d="M40 60 L60 10 L80 60 Z" 
-              fill="rgba(255, 255, 255, 0.5)"
-            />
-            <path 
-              className="mountain mountain-3"
-              d="M60 60 L80 25 L100 60 Z" 
-              fill="rgba(255, 255, 255, 0.7)"
-            />
+        <div className="poilian-loader-mark" aria-hidden="true">
+          <svg className="loader-mark" viewBox="0 0 64 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path className="loader-mark-shape" d="M7 4V50H13L24 27L13 4H7Z" />
+            <path className="loader-mark-shape" d="M18 4L30 27L18 50H25L37 27L25 4H18Z" />
+            <path className="loader-mark-shape" d="M29 4L41 27L29 50H36L48 27L36 4H29Z" />
+            <path className="loader-mark-shape" d="M40 4L52 27L40 50H47L59 27L47 4H40Z" />
           </svg>
-        </div>
-
-        {/* Loading dots */}
-        <div className="poilian-loader-dots">
-          <span className="poilian-loader-dot" style={{ animationDelay: '0s' }}></span>
-          <span className="poilian-loader-dot" style={{ animationDelay: '0.2s' }}></span>
-          <span className="poilian-loader-dot" style={{ animationDelay: '0.4s' }}></span>
         </div>
       </div>
     </div>

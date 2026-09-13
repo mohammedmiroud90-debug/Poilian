@@ -11,7 +11,7 @@ const copy: Record<Locale, Copy> = {
   fr: { nav: ["Accueil", "Articles", "Entreprises", "Notes personnelles", "Photographie", "À propos"], contact: "Contact", subscribe: "S'abonner", market: "Marché", title: <>Belhachemia, voici<br />mon espace personnel.</>, subtitle: "Histoires, réflexions, photographie et moments qui méritent d'être gardés en mémoire.", posts: "Voir tous les articles", services: "Services", search: "Rechercher des articles", menu: "Ouvrir le menu" },
   ar: { nav: ["الرئيسية", "المقالات", "الشركات", "ملاحظات شخصية", "التصوير", "من أنا"], contact: "تواصل", subscribe: "اشترك", market: "السوق", title: <>بلحاشمية، هذه<br />مساحتي الشخصية.</>, subtitle: "قصص وأفكار وتصوير ولحظات تستحق التذكر.", posts: "عرض كل المقالات", services: "الخدمات", search: "البحث في المقالات", menu: "فتح القائمة" },
 };
-const paths = ["/en", "/posts", "/projects", "/posts", "/photography", "/about"];
+const paths = ["/en", "/posts", "/projects", "/notes", "/photography", "/about"];
 
 export function HomeHero({ authorAvatarUrl }: { authorAvatarUrl: string }) {
   const [locale, setLocale] = useState<Locale>("en");
@@ -27,7 +27,7 @@ export function HomeHero({ authorAvatarUrl }: { authorAvatarUrl: string }) {
 
   useEffect(() => { 
     const saved = localStorage.getItem("poilian-locale"); 
-    if (saved === "en" || saved === "fr" || saved === "ar") setLocale(saved); 
+    if (saved === "en" || saved === "fr" || saved === "ar") window.setTimeout(() => setLocale(saved), 0); 
   }, []);
 
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); window.location.assign(query.trim() ? `/posts?query=${encodeURIComponent(query.trim())}` : "/posts"); }

@@ -8,67 +8,27 @@ export function PageLoader() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Show loader on route change
-    setLoading(true);
-    
-    // Hide loader after a short delay (simulating page load)
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 800);
+    // Defer the state transition so route changes get one paint with the loader.
+    const showTimer = setTimeout(() => setLoading(true), 0);
+    const hideTimer = setTimeout(() => setLoading(false), 800);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
   }, [pathname]);
-
-  // Show loader on initial page load
-  useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
 
   if (!loading) return null;
 
   return (
     <div className="poilian-page-loader" role="status" aria-label="Loading">
       <div className="loader-content">
-        {/* Three-circle loader animation */}
-        <div className="loader-icon">
-          <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Large circle */}
-            <circle 
-              className="loader-circle-large"
-              cx="20" 
-              cy="20" 
-              r="18" 
-              fill="none"
-              stroke="#063b8e"
-              strokeWidth="3"
-            />
-            
-            {/* Medium circle */}
-            <circle 
-              className="loader-circle-medium"
-              cx="60" 
-              cy="20" 
-              r="14" 
-              fill="none"
-              stroke="#0876db"
-              strokeWidth="3"
-            />
-            
-            {/* Small circle */}
-            <circle 
-              className="loader-circle-small"
-              cx="95" 
-              cy="20" 
-              r="8" 
-              fill="none"
-              stroke="#0B8FE8"
-              strokeWidth="3"
-              strokeDasharray="16"
-            />
+        <div className="loader-icon" aria-hidden="true">
+          <svg className="loader-mark" viewBox="0 0 64 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path className="loader-mark-shape" d="M7 4V50H13L24 27L13 4H7Z" />
+            <path className="loader-mark-shape" d="M18 4L30 27L18 50H25L37 27L25 4H18Z" />
+            <path className="loader-mark-shape" d="M29 4L41 27L29 50H36L48 27L36 4H29Z" />
+            <path className="loader-mark-shape" d="M40 4L52 27L40 50H47L59 27L47 4H40Z" />
           </svg>
         </div>
       </div>

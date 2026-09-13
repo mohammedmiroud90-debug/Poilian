@@ -7,11 +7,11 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { LanguageSelect, type Locale } from "@/components/LanguageSelect";
 
 const copy = {
-  en: { links: ["Home", "Posts", "Projects & Companies", "Research", "About me", "Contact"], search: "Search posts", submit: "Search", menu: "Open menu" },
-  fr: { links: ["Accueil", "Articles", "Projets & entreprises", "Recherche", "À propos", "Contact"], search: "Rechercher des articles", submit: "Rechercher", menu: "Ouvrir le menu" },
-  ar: { links: ["الرئيسية", "المقالات", "المشاريع والشركات", "الأبحاث", "من أنا", "تواصل"], search: "البحث في المقالات", submit: "بحث", menu: "فتح القائمة" },
+  en: { links: ["Blog posts", "Companies", "Personal notes", "Photography", "About me"], search: "Search posts", submit: "Search", menu: "Open menu" },
+  fr: { links: ["Articles", "Entreprises", "Notes personnelles", "Photographie", "À propos"], search: "Rechercher des articles", submit: "Rechercher", menu: "Ouvrir le menu" },
+  ar: { links: ["المقالات", "الشركات", "ملاحظات شخصية", "التصوير", "من أنا"], search: "البحث في المقالات", submit: "بحث", menu: "فتح القائمة" },
 } as const;
-const paths = ["/en", "/posts", "/projects", "/research", "/about", "/contact"];
+const paths = ["/posts", "/projects", "/notes", "/photography", "/about"];
 type NavigationPage = { slug: string; navigationLabel: string };
 
 export function BlogHeader({ pages: initialPages = [], category }: { pages?: NavigationPage[]; category?: string }) {
@@ -27,7 +27,9 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
 
   useEffect(() => { 
     const saved = localStorage.getItem("poilian-locale"); 
-    if (saved === "en" || saved === "fr" || saved === "ar") setLocale(saved); 
+    if (saved === "en" || saved === "fr" || saved === "ar") {
+      window.setTimeout(() => setLocale(saved), 0);
+    }
     const update = () => setScrolled(window.scrollY > 38); 
     update(); 
     window.addEventListener("scroll", update, { passive: true }); 
@@ -77,7 +79,7 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
           </button>
           
           <Link className="page-header-logo" href="/en">
-            <Image src="/Bitti.png" alt="Poilian" width={80} height={33} priority />
+            <Image src="/Bitti.png" alt="Poilian" width={158} height={40} priority />
           </Link>
         </div>
 
@@ -136,6 +138,9 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
         className={`page-header-nav page-shell${menuOpen ? " is-menu-open" : ""}`} 
         aria-label="Main navigation"
       >
+        <Link className="nav-home-icon" href="/en" onClick={closeMenu} aria-label="Home">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9Z" /></svg>
+        </Link>
         {text.links.map((label, index) => (
           <Link href={paths[index]} onClick={closeMenu} key={paths[index]}>
             {label}
@@ -147,6 +152,21 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
           </Link>
         ))}
       </nav>
+
+      {pathname.startsWith("/posts/") && (
+        <nav className="post-trending" aria-label="Trending topics">
+          <div className="post-trending-inner page-shell">
+            <span className="trending-label">TRENDING</span>
+            {[
+              ["AI & security", "/posts?query=AI"],
+              ["Digital culture", "/posts?query=culture"],
+              ["Research notes", "/research"],
+              ["Latest stories", "/posts"],
+              ["Projects", "/projects"],
+            ].map(([label, href]) => <Link href={href} key={label}>{label}</Link>)}
+          </div>
+        </nav>
+      )}
       
       {category && <span className="post-header-category">{category}</span>}
     </header>
