@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogHeader } from "@/components/BlogHeader";
 import { getProjects } from "@/lib/projects";
+
+export const metadata: Metadata = {
+  title: "Projects & Companies",
+  description: "A collection of projects, ideas and companies being built and contributed to on Bitt-i.com.",
+  alternates: { canonical: "/projects" },
+};
 
 export const dynamic = "force-dynamic";
 

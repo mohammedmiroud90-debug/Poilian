@@ -3,8 +3,9 @@ import { BlogFooter } from "@/components/BlogFooter";
 import { BlogHeader } from "@/components/BlogHeader";
 
 export const metadata: Metadata = {
-  title: "Photography application | Poilian",
-  description: "Explore the gallery and send a photography project request.",
+  title: "Photography application",
+  description: "Explore the gallery and send a photography project request on Bitt-i.com.",
+  alternates: { canonical: "/photographyapply" },
 };
 
 const gallery = [

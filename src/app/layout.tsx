@@ -6,35 +6,38 @@ import { AutoTranslate } from "@/components/AutoTranslate";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 import { PageLoader } from "@/components/PageLoader";
 import { SidebarDecoration } from "@/components/SidebarDecoration";
+import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"),
   title: {
-    default: "Bitt-i.com | Stories, Services & Marketplace",
-    template: "%s | Bitt-i.com",
+    default: `${SITE_NAME} | Stories, Services & Marketplace`,
+    template: `%s | ${SITE_NAME}`,
   },
   description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
-  applicationName: "Bitt-i.com",
-  alternates: { canonical: "/" },
+  applicationName: SITE_NAME,
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "/",
-    siteName: "Bitt-i.com",
-    title: "Bitt-i.com | Stories, Services & Marketplace",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} | Stories, Services & Marketplace`,
     description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
-    images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }],
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bitt-i.com | Stories, Services & Marketplace",
+    title: `${SITE_NAME} | Stories, Services & Marketplace`,
     description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
-    images: ["/Bitti.png"],
+    images: [DEFAULT_OG_IMAGE.url],
   },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
     apple: "/favicon.png",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

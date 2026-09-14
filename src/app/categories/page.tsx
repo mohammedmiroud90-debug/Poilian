@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogHeader } from "@/components/BlogHeader";
 import { englishCategories, postsInCategory } from "@/lib/categories";
 import { getPosts } from "@/lib/parse";
+
+export const metadata: Metadata = {
+  title: "Categories",
+  description: "Browse Bitt-i.com writing by topic and category.",
+  alternates: { canonical: "/categories" },
+};
 
 export default async function CategoriesPage() {
   const posts = await getPosts();

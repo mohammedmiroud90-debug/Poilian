@@ -3,7 +3,11 @@ import Link from "next/link";
 import { BlogHeader } from "@/components/BlogHeader";
 import { getNotes } from "@/lib/notes";
 
-export const metadata: Metadata = { title: "Personal notes | Poilian", description: "Short observations, working notes and ideas from Poilian." };
+export const metadata: Metadata = {
+  title: "Personal notes",
+  description: "Short observations, working notes and ideas from Bitt-i.com.",
+  alternates: { canonical: "/notes" },
+};
 
 export default async function NotesPage() {
   const notes = await getNotes();

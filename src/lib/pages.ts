@@ -24,8 +24,15 @@ const defaults: SitePage[] = [
 ];
 
 function string(value: unknown) { return typeof value === "string" ? value : ""; }
+function dateString(value: unknown) {
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "iso" in value && typeof (value as { iso?: unknown }).iso === "string") {
+    return (value as { iso: string }).iso;
+  }
+  return "";
+}
 function mapPage(item: Record<string, unknown>): SitePage {
-  return { id: string(item.objectId), title: string(item.title) || "Untitled page", slug: string(item.slug), excerpt: string(item.excerpt), content: string(item.content), status: item.status === "draft" ? "draft" : "published", showInNavigation: item.showInNavigation === true, navigationLabel: string(item.navigationLabel) || string(item.title), updatedAt: string(item.updatedAt) };
+  return { id: string(item.objectId), title: string(item.title) || "Untitled page", slug: string(item.slug), excerpt: string(item.excerpt), content: string(item.content), status: item.status === "draft" ? "draft" : "published", showInNavigation: item.showInNavigation === true, navigationLabel: string(item.navigationLabel) || string(item.title), updatedAt: dateString(item.updatedAt) || dateString(item.createdAt) };
 }
 
 export async function getSitePages(includeDrafts = false): Promise<SitePage[]> {

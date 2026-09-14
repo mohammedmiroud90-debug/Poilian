@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogHeader } from "@/components/BlogHeader";
 import { getPosts } from "@/lib/parse";
 import { postsInCategory } from "@/lib/categories";
 import { getAuthorProfile } from "@/lib/profile";
+
+export const metadata: Metadata = {
+  title: "Posts",
+  description: "Notes, research and thoughtful writing from the Bitt-i.com journal.",
+  alternates: { canonical: "/posts" },
+};
 
 const perPage = 6;
 export default async function PostsPage({

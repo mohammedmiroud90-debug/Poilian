@@ -6,13 +6,20 @@ import { getAuthorProfile } from "@/lib/profile";
 export const metadata: Metadata = {
   title: "Photography",
   description: "Explore the Bitt-i.com photography collection — visual storytelling and moments from Algeria.",
+  alternates: { canonical: "/photography" },
   openGraph: {
     title: "Photography | Bitt-i.com",
     description: "Explore the Bitt-i.com photography collection — visual storytelling and moments from Algeria.",
     type: "website",
     url: "/photography",
     siteName: "Bitt-i.com",
-    images: [{ url: "/Bitti.png", width: 1200, height: 630, alt: "Bitt-i.com" }],
+    images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Photography | Bitt-i.com",
+    description: "Explore the Bitt-i.com photography collection — visual storytelling and moments from Algeria.",
+    images: ["/Bitti.png"],
   },
 };
 

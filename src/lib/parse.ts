@@ -83,18 +83,19 @@ async function query(className: string, params: Record<string, string>) {
   }
 }
 
-export async function getPosts(): Promise<Post[]> {
+export async function getPosts(limit = 24): Promise<Post[]> {
   // Posts created before the CMS used both Parse classes.  Do not stop at the
   // first class with results: that hides every published BlogPost whenever an
   // Article exists (and makes their public URLs appear stale or missing).
   const classes = ["Article", "BlogPost"] as const;
+  const capped = String(Math.min(Math.max(limit, 1), 1000));
   const results = await Promise.all(
     classes.map(async (className) => ({
       className,
       result: await query(className, {
         where: JSON.stringify({ status: "published" }),
         order: "-publishedAt",
-        limit: "24",
+        limit: capped,
       }),
     })),
   );

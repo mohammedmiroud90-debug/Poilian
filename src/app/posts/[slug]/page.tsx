@@ -15,6 +15,7 @@ import { currentAdmin } from "@/lib/admin";
 import { getComments, getPost, getPosts, isRichHtmlContent, sanitizeHtml } from "@/lib/parse";
 import { getAuthorProfile } from "@/lib/profile";
 import { toVideoEmbedUrl } from "@/lib/embed";
+import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 type Block = {
   kind: "heading" | "paragraph" | "quote" | "code" | "unordered" | "ordered" | "image" | "video";
@@ -35,8 +36,28 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) return { title: "Post not found", robots: { index: false, follow: false } };
-  const description = post.excerpt || `Read ${post.title} on Poilian.`;
-  return { title: post.title, description, alternates: { canonical: `/posts/${post.slug}` }, openGraph: { type: "article", url: `/posts/${post.slug}`, title: post.title, description, siteName: "Bitt-i.com", publishedTime: post.publishedAt, authors: [post.author], images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }] }, twitter: { card: "summary_large_image", title: post.title, description, images: ["/Bitti.png"] } };
+  const description = post.excerpt || `Read ${post.title} on ${SITE_NAME}.`;
+  return {
+    title: post.title,
+    description,
+    alternates: { canonical: `/posts/${post.slug}` },
+    openGraph: {
+      type: "article",
+      url: `/posts/${post.slug}`,
+      title: post.title,
+      description,
+      siteName: SITE_NAME,
+      publishedTime: post.publishedAt,
+      authors: [post.author],
+      images: [DEFAULT_OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description,
+      images: [DEFAULT_OG_IMAGE.url],
+    },
+  };
 }
 function parseBlocks(content: string): Block[] {
   const lines = content.replace(/\r\n?/g, "\n").split("\n");
@@ -176,6 +197,19 @@ export default async function PostPage({
   
   const tags = post.category.split(/[,/|]/).map((tag) => tag.trim()).filter(Boolean);
   const usesTanklager = ["cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats", "the-devops-handbook-revisited-modern-practices-for-continuous-delivery"].includes(post.slug);
+  const description = post.excerpt || `Read ${post.title} on ${SITE_NAME}.`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description,
+    datePublished: post.publishedAt,
+    author: { "@type": "Person", name: post.author || authorProfile.name },
+    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL, logo: { "@type": "ImageObject", url: `${SITE_URL}${DEFAULT_OG_IMAGE.url}` } },
+    mainEntityOfPage: `${SITE_URL}/posts/${post.slug}`,
+    articleSection: post.category,
+    keywords: tags,
+  };
   
   let processedHtmlContent = post.contentHtml;
   if (hasHtmlContent && headings.length > 0) {
@@ -251,6 +285,7 @@ export default async function PostPage({
   );
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <BlogHeader category={post.slug === "cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats" ? post.category : undefined} />
       <main className="content-page post-page">
         <PostTools title={post.title} />

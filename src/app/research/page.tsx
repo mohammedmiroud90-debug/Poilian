@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { BlogHeader } from "@/components/BlogHeader";
 import { getSitePage, stripHtml } from "@/lib/pages";
+
+export const metadata: Metadata = {
+  title: "Research",
+  description: "Notes, references and ongoing research collected on Bitt-i.com.",
+  alternates: { canonical: "/research" },
+};
 
 export default async function ResearchPage() {
   const page = await getSitePage("research");
