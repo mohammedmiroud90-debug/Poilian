@@ -8,13 +8,29 @@ import { PageLoader } from "@/components/PageLoader";
 import { SidebarDecoration } from "@/components/SidebarDecoration";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://poilian.com"),
-  title: "Poilian Journal | Discover Algeria",
-  description: "Stories, guides and local insight for exploring Algeria.",
-  applicationName: "Poilian",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"),
+  title: {
+    default: "Bitt-i.com | Stories, Services & Marketplace",
+    template: "%s | Bitt-i.com",
+  },
+  description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
+  applicationName: "Bitt-i.com",
   alternates: { canonical: "/" },
-  openGraph: { type: "website", locale: "en_US", url: "/", siteName: "Poilian", title: "Poilian Journal | Discover Algeria", description: "Stories, guides and local insight for exploring Algeria.", images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Poilian" }] },
-  twitter: { card: "summary_large_image", title: "Poilian Journal | Discover Algeria", description: "Stories, guides and local insight for exploring Algeria.", images: ["/Bitti.png"] },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    siteName: "Bitt-i.com",
+    title: "Bitt-i.com | Stories, Services & Marketplace",
+    description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
+    images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bitt-i.com | Stories, Services & Marketplace",
+    description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
+    images: ["/Bitti.png"],
+  },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { BlogHeader } from "@/components/BlogHeader";
-import { getSitePage, getSitePages } from "@/lib/pages";
+import { getSitePage, getSitePages, sanitizePageHtml } from "@/lib/pages";
 import { getAuthorProfile } from "@/lib/profile";
 
 export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -36,7 +36,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
       {page.excerpt && <p className="page-intro">{page.excerpt}</p>}
       <article 
         className="rich-page-content" 
-        dangerouslySetInnerHTML={{ __html: page.content }}
+        dangerouslySetInnerHTML={{ __html: sanitizePageHtml(page.content) }}
       />
       {isFounder && (
         <nav className="founder-quick-links" aria-label="Founder links">

@@ -1,6 +1,8 @@
 "use client";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { SitePage } from "@/lib/pages";
+import { toVideoEmbedUrl, videoEmbedHtml } from "@/lib/embed";
+import { uploadEditorImage } from "@/lib/upload";
 
 type Draft = Omit<SitePage, "id" | "updatedAt"> & { id?: string };
 const blank = (): Draft => ({ 
@@ -24,8 +26,10 @@ export function PageManager({ initialPages }: { initialPages: SitePage[] }) {
     x: 0, 
     y: 0 
   });
+  const [uploading, setUploading] = useState(false);
   const editor = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const savedSelection = useRef<Range | null>(null);
 
   function edit(page: SitePage) { 
@@ -69,12 +73,37 @@ export function PageManager({ initialPages }: { initialPages: SitePage[] }) {
   }
   
   function addImage() { 
-    const url = prompt("Paste an image URL"); 
-    if (url) command("insertHTML", `<img src="${url.replace(/"/g, "&quot;")}" alt="" />`); 
+    imageInputRef.current?.click();
+  }
+
+  async function onImageSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setNotice("Uploading image…");
+    try {
+      const url = await uploadEditorImage(file);
+      restoreSelection();
+      command("insertHTML", `<img src="${url.replace(/"/g, "&quot;")}" alt="${file.name.replace(/"/g, "&quot;")}" />`);
+      setNotice("Image uploaded and inserted.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Image upload failed.");
+    } finally {
+      setUploading(false);
+    }
   }
   
   function addTable() { 
     command("insertHTML", "<table><thead><tr><th>Heading</th><th>Heading</th></tr></thead><tbody><tr><td>Text</td><td>Text</td></tr><tr><td>Text</td><td>Text</td></tr></tbody></table><p><br></p>"); 
+  }
+
+  function addVideo() {
+    const value = prompt("Paste a YouTube or Vimeo link");
+    if (!value) return;
+    const embedUrl = toVideoEmbedUrl(value);
+    if (!embedUrl) { alert("That link doesn't look like a YouTube or Vimeo video."); return; }
+    command("insertHTML", `${videoEmbedHtml(embedUrl)}<p><br></p>`);
   }
 
   // Handle text selection for floating toolbar
@@ -172,23 +201,24 @@ export function PageManager({ initialPages }: { initialPages: SitePage[] }) {
     if (!file) return;
 
     try {
-      // Create a local object URL
-      const url = URL.createObjectURL(file);
-      
       restoreSelection();
-      if (file.type.startsWith('image/')) {
-        command("insertHTML", `<img src="${url}" alt="${file.name}" />`);
+      if (file.type.startsWith("image/")) {
+        setUploading(true);
+        setNotice("Uploading image…");
+        const url = await uploadEditorImage(file);
+        command("insertHTML", `<img src="${url.replace(/"/g, "&quot;")}" alt="${file.name.replace(/"/g, "&quot;")}" />`);
+        setNotice("Image uploaded and inserted.");
       } else {
+        const url = URL.createObjectURL(file);
         command("insertHTML", `<a href="${url}" download="${file.name}">${file.name}</a>`);
+        setNotice(`File "${file.name}" linked locally. Prefer hosting files separately for permanence.`);
       }
-      
-      setNotice(`File "${file.name}" inserted. Note: Save to upload to server.`);
     } catch (error) {
-      setNotice("Failed to upload file");
+      setNotice(error instanceof Error ? error.message : "Failed to upload file");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-
-    // Reset input
-    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function save() { 
@@ -331,7 +361,8 @@ export function PageManager({ initialPages }: { initialPages: SitePage[] }) {
                 <button title="Code block" onClick={() => command("formatBlock", "pre")}>{"</>"}</button>
                 <i />
                 <button title="Add link" onClick={addLink}>↗</button>
-                <button title="Add image" onClick={addImage}>▧</button>
+                <button title={uploading ? "Uploading…" : "Upload image"} onClick={addImage} disabled={uploading}>▧</button>
+                <button title="Add YouTube / Vimeo video" onClick={addVideo}>▶</button>
                 <button title="Add table" onClick={addTable}>▦</button>
                 <button title="Horizontal rule" onClick={() => command("insertHorizontalRule")}>—</button>
                 <i />
@@ -510,6 +541,15 @@ export function PageManager({ initialPages }: { initialPages: SitePage[] }) {
                 }} 
               />
               
+              {/* Hidden file input for image uploads from the toolbar */}
+              <input
+                ref={imageInputRef}
+                type="file"
+                style={{ display: "none" }}
+                onChange={(event) => void onImageSelected(event)}
+                accept="image/png,image/jpeg,image/webp,image/gif"
+              />
+
               {/* Hidden file input for file upload */}
               <input 
                 ref={fileInputRef}

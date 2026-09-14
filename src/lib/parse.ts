@@ -1,3 +1,5 @@
+import { allowedIframeSrc } from "@/lib/embed";
+
 export type Post = { id: string; slug: string; title: string; excerpt: string; content: string; contentHtml?: string; author: string; publishedAt: string; category: string; className?: "Article" | "BlogPost" };
 export type Comment = { id: string; author: string; content: string; createdAt: string; parentId?: string };
 export type AnalyticsSummary = { posts: number; comments: number; views: number; viewsThisWeek: number; latestPost?: Post; topPosts: { title: string; slug: string; views: number }[]; activity: { date: string; views: number }[] };
@@ -24,8 +26,29 @@ const commentAuthor = (item: Record<string, unknown>) => {
 // Get raw HTML content (for rich editor posts)
 const getHtmlContent = (value: unknown) => typeof value === "string" ? value.trim() : "";
 
+export function sanitizeHtml(html: string) {
+  return html
+    .replace(/<(script|style|object|embed|form)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<\/?(?:script|style|object|embed|form)[^>]*>/gi, "")
+    .replace(/<iframe\b([^>]*)>[\s\S]*?<\/iframe>/gi, (match, attrs) => {
+      const src = (attrs.match(/\bsrc\s*=\s*"([^"]+)"/i) || attrs.match(/\bsrc\s*=\s*'([^']+)'/i))?.[1] ?? "";
+      return allowedIframeSrc.test(src) ? `<iframe src="${src}" title="Embedded video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>` : "";
+    })
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, "$1=\"#\"");
+}
+
+export function isRichHtmlContent(value = "") {
+  const source = value.replace(/\r\n?/g, "\n").trim();
+  if (!source.includes("<")) return false;
+  const hasMarkdownHeading = /(?:^|\n)\s{0,3}#{1,6}\s+\S/.test(source);
+  const hasHtmlBlock = /<(h[1-6]|p|ul|ol|blockquote|pre|figure|table)\b/i.test(source);
+  if (hasMarkdownHeading && !hasHtmlBlock) return false;
+  return hasHtmlBlock || /<(img|strong|em|b|i|u|a|br|div|span|hr)\b/i.test(source);
+}
+
 // Convert HTML to markdown (for backward compatibility with markdown-based posts)
-const postContent = (value: unknown) => typeof value === "string" ? value.replace(/\\n/g, "\n").replace(/<pre[^>]*>\s*<code[^>]*>([\s\S]*?)<\/code>\s*<\/pre>/gi, "\n```\n$1\n```\n").replace(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*\balt=["']([^"']*)["'][^>]*>/gi, "\n![$2]($1)\n").replace(/<img\b[^>]*\balt=["']([^"']*)["'][^>]*\bsrc=["']([^"']+)["'][^>]*>/gi, "\n![$1]($2)\n").replace(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi, "\n![]($1)\n").replace(/<h([1-3])[^>]*>([\s\S]*?)<\/h\1>/gi, "\n## $2\n").replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n- $1").replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, "\n> $1\n").replace(/<br\s*\/?>/gi, "\n").replace(/<\/(?:p|div)>/gi, "\n").replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/\r\n?/g, "\n").trim() : "";
+const postContent = (value: unknown) => typeof value === "string" ? value.replace(/\\n/g, "\n").replace(/<pre[^>]*>\s*<code[^>]*>([\s\S]*?)<\/code>\s*<\/pre>/gi, "\n```\n$1\n```\n").replace(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*\balt=["']([^"']*)["'][^>]*>/gi, "\n![$2]($1)\n").replace(/<img\b[^>]*\balt=["']([^"']*)["'][^>]*\bsrc=["']([^"']+)["'][^>]*>/gi, "\n![$1]($2)\n").replace(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi, "\n![]($1)\n").replace(/<(strong|b)[^>]*>([\s\S]*?)<\/\1>/gi, "**$2**").replace(/<(em|i)[^>]*>([\s\S]*?)<\/\1>/gi, "*$2*").replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_, level, inner) => `\n${"#".repeat(Math.min(Number(level), 3))} ${inner}\n`).replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n- $1").replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, "\n> $1\n").replace(/<br\s*\/?>/gi, "\n").replace(/<\/(?:p|div)>/gi, "\n").replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/\r\n?/g, "\n").trim() : "";
 
 const mapPost = (item: Record<string, unknown>, className?: "Article" | "BlogPost"): Post => {
   const rawContent = item.content || item.body || item.details;

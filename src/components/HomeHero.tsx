@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { LanguageSelect, type Locale } from "@/components/LanguageSelect";
+import { DottedWorldMap } from "@/components/DottedWorldMap";
 
 type Copy = { nav: string[]; contact: string; subscribe: string; market: string; title: React.ReactNode; subtitle: string; posts: string; services: string; search: string; menu: string };
 const copy: Record<Locale, Copy> = {
@@ -34,7 +35,14 @@ export function HomeHero({ authorAvatarUrl }: { authorAvatarUrl: string }) {
   function sendMessage(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (chatMessage.trim()) setChatSent(true); }
   function subscribe(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setSubscribeNotice("Thank you — you are on the list."); }
 
-  return <section className="personal-hero poilian-locale-copy" dir={locale === "ar" ? "rtl" : "ltr"}><div className="personal-shell">
+  return <section className="personal-hero poilian-locale-copy" dir={locale === "ar" ? "rtl" : "ltr"}>
+    <DottedWorldMap
+      className="hero-dotted-map"
+      patternId="hero-map-dots"
+      maskId="hero-map-mask"
+      dotFill="rgba(220,232,248,0.42)"
+    />
+    <div className="personal-shell">
     <header className="personal-topbar"><Link className="personal-logo" href="/en"><Image src="/Bitti.png" alt="Poilian" width={190} height={78} priority /></Link><div className="personal-account"><LanguageSelect value={locale} onLocaleChange={setLocale} /><button className="search-toggle" type="button" onClick={() => setSearchOpen((open) => !open)} aria-label={text.search}>⌕</button><Link href="/contact">{text.contact}</Link><button className="hero-subscribe" type="button" onClick={() => { setSubscribeNotice(""); setSubscribeOpen(true); }}>{text.subscribe}</button><Link href="/market" className="hero-market-link">{text.market} <span>↗</span></Link><a className="linkedin-link" href="https://www.linkedin.com" target="_blank" rel="noreferrer">in</a><button className={`menu-toggle${menuOpen ? " is-open" : ""}`} type="button" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen} aria-controls="home-menu" aria-label={text.menu}><i /><i /><i /></button></div></header>
     {searchOpen && <div className="hero-search-overlay" role="dialog" aria-modal="true" aria-label={text.search}><form className="hero-search" onSubmit={submit}><button className="hero-search-close" type="button" onClick={() => setSearchOpen(false)} aria-label="Close search">×</button><p>SEARCH THE JOURNAL</p><input value={query} onChange={(event) => setQuery(event.target.value)} autoFocus placeholder={text.search} /><button type="submit">{text.search} <span>↗</span></button></form></div>}
     <nav id="home-menu" className={`personal-nav${menuOpen ? " is-open" : ""}`} aria-label="Main navigation"><div className="home-mobile-menu-head"><span>POILIAN</span><button className="home-mobile-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu">×</button></div>{text.nav.map((label, index) => <Link className={index === 0 ? "active" : ""} href={paths[index]} onClick={() => setMenuOpen(false)} key={`${index}-${label}`}>{label}</Link>)}</nav>
@@ -46,5 +54,6 @@ export function HomeHero({ authorAvatarUrl }: { authorAvatarUrl: string }) {
     </aside>
     {subscribeOpen && <aside className="subscribe-modal" aria-label="Subscribe to Poilian"><form onSubmit={subscribe}><span className="subscribe-hand" aria-hidden="true">☝</span><button className="subscribe-close" type="button" onClick={() => setSubscribeOpen(false)} aria-label="Close subscription form">×</button><p className="section-label">POILIAN LETTER</p><h2>Keep in touch.</h2><p>Get occasional notes, new posts, and selected work delivered to your inbox.</p><label>Email address<input type="email" placeholder="you@example.com" required /></label><button type="submit">Subscribe <span>→</span></button>{subscribeNotice && <small className="subscribe-notice">{subscribeNotice}</small>}</form></aside>}
     <nav className="home-scroll-controls" aria-label="Quick page navigation"><button type="button" onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" })} aria-label="Scroll to bottom">↓</button><button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Scroll to top">↑</button></nav>
-  </div></section>;
+  </div>
+  </section>;
 }

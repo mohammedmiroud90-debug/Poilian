@@ -1,3 +1,5 @@
+import { allowedIframeSrc } from "@/lib/embed";
+
 export type SitePage = {
   id: string;
   title: string;
@@ -46,4 +48,14 @@ export async function getSitePage(slug: string): Promise<SitePage | null> {
 }
 
 export function stripHtml(html: string) { return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); }
-export function sanitizePageHtml(html: string) { return html.replace(/<(script|style|iframe|object|embed|form)[^>]*>[\s\S]*?<\/\1>/gi, "").replace(/<\/?(?:script|style|iframe|object|embed|form)[^>]*>/gi, "").replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "").replace(/(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, "$1=\"#\""); }
+export function sanitizePageHtml(html: string) {
+  return html
+    .replace(/<(script|style|object|embed|form)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<\/?(?:script|style|object|embed|form)[^>]*>/gi, "")
+    .replace(/<iframe\b([^>]*)>[\s\S]*?<\/iframe>/gi, (match, attrs) => {
+      const src = (attrs.match(/\bsrc\s*=\s*"([^"]+)"/i) || attrs.match(/\bsrc\s*=\s*'([^']+)'/i))?.[1] ?? "";
+      return allowedIframeSrc.test(src) ? `<iframe src="${src}" title="Embedded video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>` : "";
+    })
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, "$1=\"#\"");
+}

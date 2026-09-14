@@ -1,66 +1,146 @@
-import { BlogHeader } from "@/components/BlogHeader";
+import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata = {
-  title: "Market | Poilian",
-  description: "Explore our marketplace for quality products and services.",
+export const metadata: Metadata = {
+  title: "Marketplace",
+  description:
+    "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace.",
+  alternates: { canonical: "/market" },
+  openGraph: {
+    type: "website",
+    url: "/market",
+    siteName: "Bitt-i.com",
+    title: "Marketplace | Bitt-i.com",
+    description:
+      "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace.",
+    images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Marketplace | Bitt-i.com",
+    description:
+      "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace.",
+    images: ["/Bitti.png"],
+  },
 };
+
+const listings = [
+  {
+    id: "products",
+    date: "PRODUCTS",
+    title: "Handpicked goods from trusted makers",
+    description:
+      "A shortlist of quality products chosen for craft, usefulness and community values — launching soon on Bitt-i.com.",
+    tag: "Coming soon",
+  },
+  {
+    id: "services",
+    date: "SERVICES",
+    title: "Local talent you can hire with confidence",
+    description:
+      "Connect with skilled professionals for research, writing, design and creative work through a curated marketplace.",
+    tag: "Professionals",
+  },
+  {
+    id: "community",
+    date: "COMMUNITY",
+    title: "Opportunities shaped with the community",
+    description:
+      "Listings, collaborations and launches built for people who care about thoughtful work — not noise.",
+    tag: "Opportunities",
+  },
+];
 
 export default function MarketPage() {
   return (
-    <>
-      <BlogHeader />
-      <main className="content-page">
-        <p className="section-label">MARKETPLACE</p>
-        <h1>Market</h1>
-        <p className="page-intro">
-          Discover quality products, services, and opportunities curated for our community.
-        </p>
+    <main className="standalone-page bitti-board">
+      <div className="bitti-board-brand">
+        <Link href="/en" className="bitti-brand-mark" aria-label="Bitt-i.com home">
+          <img src="/Bitti.png" alt="Bitt-i.com" width={168} height={44} />
+        </Link>
+        <nav aria-label="Standalone links">
+          <Link href="/services">Services</Link>
+          <Link href="/contact">Contact</Link>
+        </nav>
+      </div>
 
-        <div className="market-coming-soon">
-          <div className="coming-soon-icon">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="21" r="1"></circle>
-              <circle cx="20" cy="21" r="1"></circle>
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-            </svg>
-          </div>
-          <h2>Coming Soon</h2>
+      <section className="bitti-feature-hero">
+        <div className="bitti-feature-hero-copy">
+          <h1>
+            (re)introducing <span>Bitt-i Marketplace</span>
+          </h1>
           <p>
-            We're building something special for you. Our marketplace will feature carefully selected products, 
-            services, and opportunities that align with our community values.
+            A cleaner place to discover products, services and opportunities — curated for quality, not clutter.
           </p>
-          <div className="coming-soon-features">
-            <div className="feature-item">
-              <span className="feature-icon">✓</span>
-              <div>
-                <strong>Quality Products</strong>
-                <p>Handpicked items from trusted vendors</p>
+        </div>
+        <div className="bitti-feature-hero-visual" aria-hidden="true">
+          <div className="bitti-mock-stack">
+            <div className="bitti-mock-card bitti-mock-back" />
+            <div className="bitti-mock-card bitti-mock-mid" />
+            <div className="bitti-mock-profile">
+              <div className="bitti-mock-profile-top">
+                <span className="bitti-avatar" />
+                <div>
+                  <strong>Marketplace</strong>
+                  <small>Curated by Bitt-i.com</small>
+                </div>
+              </div>
+              <p>Quality products, local services and community-driven opportunities in one calm storefront.</p>
+              <div className="bitti-mock-stats">
+                <div>
+                  <b>3</b>
+                  <span>Launch categories</span>
+                </div>
+                <div>
+                  <b>Soon</b>
+                  <span>Public listings</span>
+                </div>
               </div>
             </div>
-            <div className="feature-item">
-              <span className="feature-icon">✓</span>
-              <div>
-                <strong>Local Services</strong>
-                <p>Connect with skilled professionals</p>
-              </div>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">✓</span>
-              <div>
-                <strong>Community Driven</strong>
-                <p>Built for and by our community</p>
-              </div>
-            </div>
-          </div>
-          <div className="coming-soon-cta">
-            <p>Want to be notified when we launch?</p>
-            <Link href="/contact" className="primary-button">
-              Get in Touch
-            </Link>
           </div>
         </div>
-      </main>
-    </>
+      </section>
+
+      <section className="bitti-featured-note">
+        <p className="bitti-featured-label">
+          <span aria-hidden="true">★</span> FEATURED
+        </p>
+        <h2>A marketplace built for thoughtful work</h2>
+        <p>
+          Bitt-i.com Marketplace is being shaped as a selective space — fewer listings, clearer stories, and
+          vendors you can trust. Join the waitlist through contact while we prepare the first wave.
+        </p>
+      </section>
+
+      <section className="bitti-dark-grid" aria-label="Marketplace categories">
+        {listings.map((item) => (
+          <article key={item.id} className="bitti-dark-card">
+            <p className="bitti-dark-date">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+              {item.date}
+            </p>
+            <h3>{item.title}</h3>
+            <p>{item.description}</p>
+            <div className="bitti-dark-meta">
+              <span className="bitti-pill">{item.tag}</span>
+              <Link href="/contact">Notify me →</Link>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="bitti-board-cta">
+        <div>
+          <h2>Want early access?</h2>
+          <p>Tell us whether you are a buyer, maker or service provider — we will keep you posted.</p>
+        </div>
+        <Link href="/contact" className="bitti-cta-button">
+          Get in touch
+        </Link>
+      </section>
+    </main>
   );
 }

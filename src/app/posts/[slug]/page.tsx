@@ -5,16 +5,19 @@ import Link from "next/link";
 import { ArticleToc } from "@/components/ArticleToc";
 import { BlogHeader } from "@/components/BlogHeader";
 import { CommentSection } from "@/components/CommentSection";
+import { ContributeCard } from "@/components/ContributeCard";
+import { InboxNewsletter } from "@/components/InboxNewsletter";
 import { PostTools } from "@/components/PostTools";
 import { PostAuthor } from "@/components/PostAuthor";
 import { CodeBlock } from "@/components/CodeBlock";
 import { InlinePostEditor } from "@/components/InlinePostEditor";
 import { currentAdmin } from "@/lib/admin";
-import { getComments, getPost, getPosts } from "@/lib/parse";
+import { getComments, getPost, getPosts, isRichHtmlContent, sanitizeHtml } from "@/lib/parse";
 import { getAuthorProfile } from "@/lib/profile";
+import { toVideoEmbedUrl } from "@/lib/embed";
 
 type Block = {
-  kind: "heading" | "paragraph" | "quote" | "code" | "unordered" | "ordered" | "image";
+  kind: "heading" | "paragraph" | "quote" | "code" | "unordered" | "ordered" | "image" | "video";
   value: string;
   level?: number;
   items?: string[];
@@ -31,9 +34,9 @@ const idFrom = (value: string, index: number) =>
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPost(slug);
-  if (!post) return { title: "Post not found | Poilian", robots: { index: false, follow: false } };
+  if (!post) return { title: "Post not found", robots: { index: false, follow: false } };
   const description = post.excerpt || `Read ${post.title} on Poilian.`;
-  return { title: `${post.title} | Poilian`, description, alternates: { canonical: `/posts/${post.slug}` }, openGraph: { type: "article", url: `/posts/${post.slug}`, title: post.title, description, siteName: "Poilian", publishedTime: post.publishedAt, authors: [post.author], images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Poilian" }] }, twitter: { card: "summary_large_image", title: post.title, description, images: ["/Bitti.png"] } };
+  return { title: post.title, description, alternates: { canonical: `/posts/${post.slug}` }, openGraph: { type: "article", url: `/posts/${post.slug}`, title: post.title, description, siteName: "Bitt-i.com", publishedTime: post.publishedAt, authors: [post.author], images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }] }, twitter: { card: "summary_large_image", title: post.title, description, images: ["/Bitti.png"] } };
 }
 function parseBlocks(content: string): Block[] {
   const lines = content.replace(/\r\n?/g, "\n").split("\n");
@@ -61,7 +64,13 @@ function parseBlocks(content: string): Block[] {
       index++;
       continue;
     }
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    const video = line.match(/^\[video\]\((https?:\/\/[^\s)]+)\)$/i);
+    if (video) {
+      blocks.push({ kind: "video", value: video[1] });
+      index++;
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
       const value = heading[2];
       blocks.push({
@@ -102,7 +111,7 @@ function parseBlocks(content: string): Block[] {
     while (
       index < lines.length &&
       lines[index].trim() &&
-      !/^(#{1,3}\s|```|[-*+]\s+|\d+\.\s+|>)/.test(lines[index].trim())
+      !/^(#{1,6}\s|```|[-*+]\s+|\d+\.\s+|>|!\[[^\]]*\]\(|\[video\]\()/i.test(lines[index].trim())
     )
       paragraph.push(lines[index++].trim());
     blocks.push({ kind: "paragraph", value: paragraph.join(" ") });
@@ -116,7 +125,9 @@ function InlineCode({ value }: { value: string }) {
         .split(/(`[^`]+`)/g)
         .map((part, index) => {
           if (part.startsWith("`") && part.endsWith("`")) return <code key={index}>{part.slice(1, -1)}</code>;
-          return part.split(/(\[[^\]]+\]\(https?:\/\/[^)]+\)|https?:\/\/[^\s]+|#[\p{L}\p{N}_-]+)/gu).map((token, tokenIndex) => {
+          return part.split(/(\*\*[^*]+?\*\*|\*[^*]+?\*|\[[^\]]+\]\(https?:\/\/[^)]+\)|https?:\/\/[^\s]+|#[\p{L}\p{N}_-]+)/gu).map((token, tokenIndex) => {
+            if (token.startsWith("**") && token.endsWith("**")) return <strong key={`${index}-${tokenIndex}`}>{token.slice(2, -2)}</strong>;
+            if (token.startsWith("*") && token.endsWith("*") && token.length > 2 && !token.startsWith("**")) return <em key={`${index}-${tokenIndex}`}>{token.slice(1, -1)}</em>;
             const markdownLink = token.match(/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/);
             const href = markdownLink?.[2] ?? (token.match(/^https?:\/\//) ? token : "");
             const tag = token.match(/^#([\p{L}\p{N}_-]+)$/u);
@@ -141,30 +152,19 @@ export default async function PostPage({
   const authorPostCount = allPosts.filter((item) => item.author === authorProfile.name || item.author === post.author).length;
   const comments = await getComments(post.id);
   
-  // Check if we have HTML content (from rich editor) or markdown content
-  const hasHtmlContent = post.contentHtml && post.contentHtml.includes('<');
+  const hasHtmlContent = isRichHtmlContent(post.contentHtml);
   
   let blocks: Block[] = [];
   let headings: (Block & { id: string })[] = [];
   
   if (hasHtmlContent) {
-    // Extract headings from HTML content for TOC
-    // Match h1, h2, h3, h4, h5, h6 tags
     const headingMatches = [...(post.contentHtml?.matchAll(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi) || [])];
     let headingIndex = 0;
     headings = headingMatches.map(match => {
       const level = parseInt(match[1]);
-      const value = match[2].replace(/<[^>]*>/g, ''); // Strip inner HTML tags
+      const value = match[2].replace(/<[^>]*>/g, '');
       const id = idFrom(value, headingIndex++);
       return { kind: "heading" as const, value, level, id };
-    });
-    
-    console.log('🔍 HTML Post Headings Debug:', {
-      slug: post.slug,
-      hasHtmlContent,
-      headingMatchesFound: headingMatches.length,
-      headings: headings.map(h => ({ level: h.level, value: h.value })),
-      contentPreview: post.contentHtml?.substring(0, 500)
     });
   } else {
     blocks = parseBlocks(post.content);
@@ -174,13 +174,9 @@ export default async function PostPage({
     );
   }
   
-  // Ensure sidebar is shown (always render if there are headings OR force show for specific posts)
-  const shouldShowSidebar = headings.length > 0 || ["cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats"].includes(post.slug);
-  
   const tags = post.category.split(/[,/|]/).map((tag) => tag.trim()).filter(Boolean);
   const usesTanklager = ["cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats", "the-devops-handbook-revisited-modern-practices-for-continuous-delivery"].includes(post.slug);
   
-  // Add IDs to HTML headings for TOC navigation
   let processedHtmlContent = post.contentHtml;
   if (hasHtmlContent && headings.length > 0) {
     let headingIndex = 0;
@@ -196,14 +192,13 @@ export default async function PostPage({
   const article = hasHtmlContent ? (
     <article 
       className="post-body rich-post-content" 
-      dangerouslySetInnerHTML={{ __html: processedHtmlContent! }}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(processedHtmlContent || "") }}
     />
   ) : (
     <article className="post-body">
       {blocks.map((block, index) => {
         if (block.kind === "heading") {
-          const Tag =
-            block.level === 1 ? "h2" : block.level === 2 ? "h3" : "h4";
+          const Tag = (block.level ?? 2) >= 3 ? "h3" : "h2";
           return (
             <Tag id={block.id} key={`${block.id}-${index}`}>
               <InlineCode value={block.value} />
@@ -212,6 +207,14 @@ export default async function PostPage({
         }
         if (block.kind === "code") return <CodeBlock code={block.value} key={index} />;
         if (block.kind === "image") return <figure className="post-image" key={index}><img src={block.value} alt={block.alt || ""} loading="lazy" />{block.alt && <figcaption>{block.alt}</figcaption>}</figure>;
+        if (block.kind === "video") {
+          const embedUrl = toVideoEmbedUrl(block.value);
+          return embedUrl ? (
+            <div className="video-embed" key={index}>
+              <iframe src={embedUrl} title="Embedded video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            </div>
+          ) : null;
+        }
         if (block.kind === "unordered")
           return (
             <ul key={index}>
@@ -272,11 +275,15 @@ export default async function PostPage({
         <section className="post-reading-layout">
           {article}
           <div className="post-reading-sidebar">
+            <ContributeCard />
             <aside className="post-toc-sidebar">
               <ArticleToc headings={headings.length > 0 ? headings.map(({ id, value, level }) => ({ id: id!, value, level })) : []} />
             </aside>
-            <aside className="post-publicity-banner">
-              <div className="post-publicity-banner-image" role="img" aria-label="Promotional banner" />
+            <aside className="post-promotion-sidebar" aria-label="Work with Poilian">
+              <a className="toc-promotion" href="/contact">
+                <img src={authorProfile.promotionImage} alt="Work with Poilian" />
+                <span>Work with Poilian <b>↗</b></span>
+              </a>
             </aside>
           </div>
         </section>
@@ -284,6 +291,7 @@ export default async function PostPage({
         <PostAuthor author={authorProfile.name} bio={authorProfile.bio} avatarUrl={authorProfile.avatarUrl} />
         <CommentSection postId={post.id} initialComments={comments} />
       </main>
+      <InboxNewsletter />
     </>
   );
 }

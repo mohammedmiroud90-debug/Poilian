@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
+import { toVideoEmbedUrl } from "@/lib/embed";
+import { uploadEditorImage } from "@/lib/upload";
 
 type EditablePost = { 
   id: string; 
@@ -18,12 +20,14 @@ export function InlinePostEditor({ post }: { post: EditablePost }) {
   const [excerpt, setExcerpt] = useState(post.excerpt);
   const [content, setContent] = useState(post.content);
   const [notice, setNotice] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [floatingToolbar, setFloatingToolbar] = useState<{ show: boolean; x: number; y: number }>({ 
     show: false, 
     x: 0, 
     y: 0 
   });
   const body = useRef<HTMLTextAreaElement>(null);
+  const imageInput = useRef<HTMLInputElement>(null);
   const savedSelection = useRef<{ start: number; end: number } | null>(null);
 
   // Handle text selection for floating toolbar
@@ -89,6 +93,49 @@ export function InlinePostEditor({ post }: { post: EditablePost }) {
     
     // Hide floating toolbar after action
     setFloatingToolbar({ show: false, x: 0, y: 0 });
+  }
+
+  function insertAtCursor(snippet: string) {
+    const input = body.current;
+    if (!input) return;
+    const start = input.selectionStart ?? content.length;
+    const end = input.selectionEnd ?? content.length;
+    const next = `${content.slice(0, start)}${snippet}${content.slice(end)}`;
+    setContent(next);
+    requestAnimationFrame(() => {
+      input.focus();
+      const cursor = start + snippet.length;
+      input.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function insertImage() {
+    imageInput.current?.click();
+  }
+
+  async function onImageSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setNotice("Uploading image…");
+    try {
+      const url = await uploadEditorImage(file);
+      const alt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+      insertAtCursor(`\n![${alt}](${url})\n`);
+      setNotice("Image uploaded and inserted.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Image upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function insertVideo() {
+    const url = prompt("Paste a YouTube or Vimeo link");
+    if (!url) return;
+    if (!toVideoEmbedUrl(url)) { alert("That link doesn't look like a YouTube or Vimeo video."); return; }
+    insertAtCursor(`\n[video](${url})\n`);
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -174,7 +221,18 @@ export function InlinePostEditor({ post }: { post: EditablePost }) {
               <button type="button" onClick={() => wrap("- ", "", "List item")}>List</button>
               <button type="button" onClick={() => wrap("> ", "", "Quote")}>Quote</button>
               <button type="button" onClick={() => wrap("[", "](https://)", "Link text")}>Link</button>
+              <button type="button" onClick={insertImage} disabled={uploading}>
+                {uploading ? "Uploading…" : "Image"}
+              </button>
+              <button type="button" onClick={insertVideo}>Video</button>
             </div>
+            <input
+              ref={imageInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              hidden
+              onChange={(event) => void onImageSelected(event)}
+            />
             
             {/* Floating toolbar for selected text */}
             {floatingToolbar.show && (

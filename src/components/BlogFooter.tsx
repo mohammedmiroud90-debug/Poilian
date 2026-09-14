@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Locale } from "@/components/LanguageSelect";
+import { FooterDottedMap } from "@/components/FooterDottedMap";
 
 const copy: Record<Locale, { description: string; admin: string; rights: string; links: [string, string, string, string, string] }> = {
   en: { description: "Stories, research and local insight from Algeria.", admin: "Admin login", rights: "All Rights Reserved.", links: ["Home", "Posts", "Projects", "About", "Contact"] },
@@ -24,22 +25,41 @@ export function BlogFooter() {
     return () => window.removeEventListener("poilian-locale-change", listener);
   }, []);
   const text = copy[locale];
-  return <footer className="personal-footer poilian-locale-copy reference-footer-wrap" dir={locale === "ar" ? "rtl" : "ltr"}>
-    <div className="reference-footer">
-      <div className="reference-footer-top">
-        <div className="reference-footer-brand"><Link className="reference-footer-logo" href="/en" aria-label="Poilian home"><Image src="/Bitti.png" alt="Poilian" width={180} height={74} /></Link><p>{text.description}</p></div>
-        <div className="reference-footer-navs">
-          <nav className="reference-footer-links" aria-label="Site links">
-            <Link href="/en">{text.links[0]}</Link><Link href="/posts">{text.links[1]}</Link><Link href="/projects">{text.links[2]}</Link>
-            <Link href="/about">{text.links[3]}</Link><Link href="/contact">{text.links[4]}</Link><Link className="footer-admin-login" href="/admin">{text.admin}</Link>
-          </nav>
-          <nav className="reference-footer-social" aria-label="Social channels">
-            <a href="https://www.linkedin.com">LinkedIn ↗</a><a href="#x">X / Twitter ↗</a><a href="#instagram">Instagram ↗</a>
-          </nav>
+  return (
+    <footer className="personal-footer poilian-locale-copy reference-footer-wrap" dir={locale === "ar" ? "rtl" : "ltr"}>
+      <div className="reference-footer-main">
+        <FooterDottedMap />
+        <div className="reference-footer">
+          <div className="reference-footer-top">
+            <div className="reference-footer-brand">
+              <Link className="reference-footer-logo" href="/en" aria-label="Poilian home">
+                <Image src="/Bitti.png" alt="Poilian" width={180} height={74} />
+              </Link>
+              <p>{text.description}</p>
+            </div>
+            <div className="reference-footer-navs">
+              <nav className="reference-footer-links" aria-label="Site links">
+                <Link href="/en">{text.links[0]}</Link>
+                <Link href="/posts">{text.links[1]}</Link>
+                <Link href="/projects">{text.links[2]}</Link>
+                <Link href="/about">{text.links[3]}</Link>
+                <Link href="/contact">{text.links[4]}</Link>
+                <Link className="footer-admin-login" href="/admin">{text.admin}</Link>
+              </nav>
+              <nav className="reference-footer-social" aria-label="Social channels">
+                <a href="https://www.linkedin.com">LinkedIn ↗</a>
+                <a href="#x">X / Twitter ↗</a>
+                <a href="#instagram">Instagram ↗</a>
+              </nav>
+            </div>
+          </div>
+          <div className="reference-footer-meta">
+            <p>Built with care in Algeria.</p>
+            <p className="reference-footer-copyright">© 2026 Belhachemia Mohammed. {text.rights}</p>
+          </div>
         </div>
       </div>
-      <div className="reference-footer-meta"><p>Built with care in Algeria.</p><p className="reference-footer-copyright">© 2026 Belhachemia Mohammed. {text.rights}</p></div>
-    </div>
-    <div className="reference-footer-photo" role="img" aria-label="Footer visual" />
-  </footer>;
+      <div className="reference-footer-photo" role="img" aria-label="Footer visual" />
+    </footer>
+  );
 }

@@ -25,6 +25,10 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
   const inputRef = useRef<HTMLInputElement>(null);
   const text = copy[locale];
 
+  const [liked, setLiked] = useState(false);
+  const [followed, setFollowed] = useState(false);
+  const isPostView = pathname.startsWith("/posts/") && pathname !== "/posts";
+
   useEffect(() => { 
     const saved = localStorage.getItem("poilian-locale"); 
     if (saved === "en" || saved === "fr" || saved === "ar") {
@@ -54,9 +58,26 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
   
   function closeMenu() { setMenuOpen(false); }
 
+  function listenArticle() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const title = document.querySelector(".post-page h1")?.textContent?.trim();
+    const intro = document.querySelector(".post-page .page-intro")?.textContent?.trim();
+    const textToSpeak = [title, intro].filter(Boolean).join(". ");
+    if (!textToSpeak) return;
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.rate = 1;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function scrollToThread() {
+    document.getElementById("comments")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    closeMenu();
+  }
+
   return (
     <header 
-      className={`page-header poilian-locale-copy${scrolled ? " is-scrolled" : ""}${pathname.startsWith("/posts/") ? " post-header" : ""}`} 
+      className={`page-header poilian-locale-copy${scrolled ? " is-scrolled" : ""}${isPostView ? " post-header" : ""}${isPostView && scrolled ? " post-sticky-mobile" : ""}`} 
       dir={locale === "ar" ? "rtl" : "ltr"}
     >
       <div className="page-header-top page-shell">
@@ -79,11 +100,54 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
           </button>
           
           <Link className="page-header-logo" href="/en">
-            <Image src="/Bitti.png" alt="Poilian" width={158} height={40} priority />
+            <Image src="/Bitti.png" alt="Bitt-i.com" width={158} height={40} priority />
           </Link>
         </div>
 
-        {/* Right side: Language, Search, LinkedIn */}
+        <div className="header-right">
+        {isPostView && (
+          <nav className="post-sticky-actions" aria-label="Article quick actions">
+            <button
+              type="button"
+              className={liked ? "is-active" : ""}
+              onClick={() => setLiked((value) => !value)}
+              aria-pressed={liked}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 11v10H4.5A1.5 1.5 0 0 1 3 19.5v-6A1.5 1.5 0 0 1 4.5 12H7Zm0 0 3.2-6.4A2.2 2.2 0 0 1 12.2 3.5h.3A2.5 2.5 0 0 1 15 6v3.5h4.2a2.3 2.3 0 0 1 2.3 2.7l-1.1 7.2A2.5 2.5 0 0 1 17.9 22H7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+              </svg>
+              <span>Like</span>
+            </button>
+            <button
+              type="button"
+              className={followed ? "is-active" : ""}
+              onClick={() => setFollowed((value) => !value)}
+              aria-pressed={followed}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 3.5h12v17l-6-3.5-6 3.5v-17Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                <path d="m12 8 .7 1.5 1.6.2-1.2 1.1.3 1.6L12 11.7l-1.4.7.3-1.6-1.2-1.1 1.6-.2L12 8Z" fill="currentColor" />
+              </svg>
+              <span>Follow</span>
+            </button>
+            <button type="button" onClick={listenArticle}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4.5 13.5v-2A7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 7.5 7.5v2" fill="none" stroke="currentColor" strokeWidth="1.7" />
+                <path d="M4.5 13.5A2.5 2.5 0 0 0 7 16h1v-5H7a2.5 2.5 0 0 0-2.5 2.5Zm15 0A2.5 2.5 0 0 1 17 16h-1v-5h1a2.5 2.5 0 0 1 2.5 2.5Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+              </svg>
+              <span>Listen</span>
+            </button>
+            <button type="button" onClick={scrollToThread}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 6.5h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H10l-3.5 3v-3H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                <path d="M9 5h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1" fill="none" stroke="currentColor" strokeWidth="1.7" opacity=".7" />
+              </svg>
+              <span>Thread</span>
+            </button>
+          </nav>
+        )}
+
+        {/* Right side: Language, Search, LinkedIn / sticky profile */}
         <div className="header-utilities">
           <LanguageSelect value={locale} onLocaleChange={setLocale} />
           
@@ -116,6 +180,17 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
             </svg>
             <span>LinkedIn</span>
           </a>
+        </div>
+
+        {isPostView && (
+          <Link className="post-sticky-profile" href="/about" aria-label="Your profile">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" strokeWidth="1.7" />
+              <circle cx="12" cy="10" r="3.1" fill="none" stroke="currentColor" strokeWidth="1.7" />
+              <path d="M6.8 18.2a5.8 5.8 0 0 1 10.4 0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            </svg>
+          </Link>
+        )}
         </div>
       </div>
       
