@@ -15,14 +15,24 @@ const allowedTypes = new Set([
   "audio/m4a",
 ]);
 
+const typeFromName = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".mp3")) return "audio/mpeg";
+  if (lower.endsWith(".wav")) return "audio/wav";
+  if (lower.endsWith(".ogg")) return "audio/ogg";
+  if (lower.endsWith(".webm")) return "audio/webm";
+  if (lower.endsWith(".m4a") || lower.endsWith(".mp4") || lower.endsWith(".aac")) return "audio/mp4";
+  return "";
+};
+
 export async function POST(request: Request) {
   if (!(await currentAdmin())) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   const audio = (await request.formData()).get("audio");
   if (!(audio instanceof File) || audio.size > 30 * 1024 * 1024) {
     return NextResponse.json({ error: "Upload an MP3, WAV, OGG, or M4A file smaller than 30 MB." }, { status: 400 });
   }
-  const type = audio.type || "audio/mpeg";
-  if (audio.type && !allowedTypes.has(audio.type)) {
+  const type = allowedTypes.has(audio.type) ? audio.type : typeFromName(audio.name);
+  if (!type || !allowedTypes.has(type)) {
     return NextResponse.json({ error: "Upload an MP3, WAV, OGG, or M4A audio file." }, { status: 400 });
   }
   const name = audio.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-100) || "post-audio.mp3";

@@ -56,7 +56,13 @@ export function PostListen({ src, title }: { src: string; title: string }) {
     }
 
     setNotice("");
-    if (audio.error) audio.load();
+    if (audio.error) {
+      const currentSrc = audio.getAttribute("src") || source;
+      audio.removeAttribute("src");
+      audio.load();
+      audio.src = currentSrc;
+      audio.load();
+    }
 
     try {
       await audio.play();
@@ -75,7 +81,12 @@ export function PostListen({ src, title }: { src: string; title: string }) {
     window.addEventListener(POST_AUDIO_TOGGLE, onToggle);
     return () => {
       window.removeEventListener(POST_AUDIO_TOGGLE, onToggle);
-      audioRef.current?.pause();
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.removeAttribute("src");
+        audio.load();
+      }
       emitState(false);
     };
   }, [playPause]);
@@ -85,6 +96,11 @@ export function PostListen({ src, title }: { src: string; title: string }) {
     setDuration(0);
     setNotice("");
     setPlayback(false);
+    const audio = audioRef.current;
+    if (audio && source) {
+      audio.src = source;
+      audio.load();
+    }
   }, [source, setPlayback]);
 
   useEffect(() => {
@@ -115,7 +131,7 @@ export function PostListen({ src, title }: { src: string; title: string }) {
       <audio
         ref={audioRef}
         src={source}
-        preload="auto"
+        preload="metadata"
         playsInline
         onLoadedMetadata={(event) => {
           const length = event.currentTarget.duration;
@@ -126,7 +142,7 @@ export function PostListen({ src, title }: { src: string; title: string }) {
           const length = event.currentTarget.duration;
           if (Number.isFinite(length) && length > 0) setDuration(length);
         }}
-        onError={() => setNotice("This audio file could not be loaded.")}
+        onError={() => setNotice("This audio file could not be loaded. Check the URL or try again.")}
         onTimeUpdate={(event) => setCurrent(event.currentTarget.currentTime || 0)}
         onPlay={() => setPlayback(true)}
         onPause={() => setPlayback(false)}

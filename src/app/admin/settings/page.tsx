@@ -4,5 +4,13 @@ import { getNotes } from "@/lib/notes";
 
 export default async function SettingsPage() {
   const profile = await getAuthorProfile();
-  return <SettingsManager initialImage={profile.promotionImage} initialLogo={profile.logoUrl} initialCommentAvatar={profile.commentAvatarUrl} initialNotes={await getNotes(true)} />;
+  return (
+    <SettingsManager
+      initialImage={profile.promotionImage}
+      initialLogo={profile.logoUrl}
+      initialCommentAvatar={profile.commentAvatarUrl}
+      initialFavicon={profile.faviconUrl}
+      initialNotes={await getNotes(true)}
+    />
+  );
 }

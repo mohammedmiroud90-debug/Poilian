@@ -321,11 +321,11 @@
   .post-toc-sidebar .article-toc a { font-size: 11px; }
 }
 
-/* Open Sans is the editorial typeface for the main post reading experience. */
-.post-page :is(h1, .page-intro, .post-meta, .author-profile, .post-body, .article-toc) { font-family: "Open Sans", Arial, sans-serif; }.post-page .post-body { letter-spacing: 0; }.post-page .post-body :is(pre, code) { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+/* Ranade is the editorial typeface for the main post reading experience. */
+.post-page :is(h1, .page-intro, .post-meta, .author-profile, .post-body, .article-toc) { font-family: "Ranade", "Open Sans", Arial, sans-serif; }.post-page .post-body { letter-spacing: 0; }.post-page .post-body :is(pre, code) { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 
 /* Direct child elements need their own declaration to override the older Haskoy rule. */
-.post-page .post-body :is(p, li, blockquote, h2, h3, h4) { font-family: "Open Sans", Arial, sans-serif; }
+.post-page .post-body :is(p, li, blockquote, h2, h3, h4) { font-family: "Ranade", "Open Sans", Arial, sans-serif; }
 
 /* The home feed mirrors the post index's simple, editorial linked-list format. */
 .home-post-grid { display: none; }.home-recent-list { display: grid; gap: 19px; margin: 29px 0 0; padding-left: 33px; }.home-recent-list li { padding-left: 2px; }.home-recent-list li::marker { color: #17233b; font-size: 14px; font-weight: 700; }.home-recent-list a { color: #0769c6; font-family: "Epilogue", "Open Sans", Arial, sans-serif; font-size: 18px; font-weight: 700; line-height: 1.35; text-decoration: none; }.home-recent-list a:hover { color: #063b8e; text-decoration: underline; }.home-recent-list a span { font-size: 13px; }.home-recent-list p { margin: 5px 0 3px; color: #526173; font-size: 12px; }.home-recent-list small { color: #5e6d82; font-size: 11px; }
@@ -1054,13 +1054,13 @@
   color: #17233b;
   line-height: 1.85;
   font-size: 19px;
-  font-family: "Open Sans", Arial, sans-serif;
+  font-family: "Ranade", "Open Sans", Arial, sans-serif;
 }
 
 .rich-post-content h2 {
   margin: 38px 0 18px;
   color: #063b8e;
-  font-family: "Open Sans", Arial, sans-serif;
+  font-family: "Ranade", "Open Sans", Arial, sans-serif;
   font-size: 32px;
   font-weight: 700;
   line-height: 1.25;
@@ -1070,7 +1070,7 @@
 .rich-post-content h3 {
   margin: 32px 0 16px;
   color: #063b8e;
-  font-family: "Open Sans", Arial, sans-serif;
+  font-family: "Ranade", "Open Sans", Arial, sans-serif;
   font-size: 26px;
   font-weight: 700;
   line-height: 1.3;
@@ -1080,7 +1080,7 @@
 .rich-post-content h4 {
   margin: 28px 0 14px;
   color: #17233b;
-  font-family: "Open Sans", Arial, sans-serif;
+  font-family: "Ranade", "Open Sans", Arial, sans-serif;
   font-size: 21px;
   font-weight: 700;
   line-height: 1.35;
@@ -4703,7 +4703,7 @@ body:has(.standalone-page) .sidebar-decoration,
   }
   .post-header .post-sticky-actions button {
     display: grid;
-    min-width: 52px;
+    min-width: 48px;
     gap: 4px;
     justify-items: center;
     border: 0;
@@ -4781,36 +4781,39 @@ body:has(.standalone-page) .sidebar-decoration,
   .post-header.post-sticky-mobile .header-right {
     flex: 1;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
   }
   .post-header.post-sticky-mobile .post-sticky-actions {
     display: flex;
     flex: 1;
     align-items: center;
-    justify-content: center;
-    gap: clamp(10px, 3.5vw, 20px);
+    justify-content: space-evenly;
+    gap: clamp(6px, 2.5vw, 16px);
     min-width: 0;
     margin: 0;
-    padding: 0;
+    padding: 0 4px 0 0;
     border: 0;
   }
   .post-sticky-actions button {
     display: grid;
-    gap: 3px;
+    gap: 2px;
     justify-items: center;
     border: 0;
-    padding: 0;
+    padding: 2px 4px;
     background: transparent;
     color: #fff;
     cursor: pointer;
+    min-width: 0;
+    flex: 1;
+    max-width: 72px;
   }
   .post-sticky-actions button svg {
     width: 22px;
     height: 22px;
   }
   .post-sticky-actions button span {
-    font: 600 10px/1 "Open Sans", Arial, sans-serif;
+    font: 600 9px/1 "Open Sans", Arial, sans-serif;
     letter-spacing: .01em;
   }
   .post-sticky-actions button.is-active {
@@ -4818,15 +4821,17 @@ body:has(.standalone-page) .sidebar-decoration,
   }
   .post-header.post-sticky-mobile .post-sticky-profile {
     display: grid;
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     flex: none;
     place-items: center;
+    border: 1px solid #ffffff3d;
+    border-radius: 50%;
     color: #fff;
   }
   .post-sticky-profile svg {
-    width: 26px;
-    height: 26px;
+    width: 18px;
+    height: 18px;
   }
   .post-header.post-sticky-mobile .page-header-nav.is-menu-open {
     top: 60px;
@@ -4843,8 +4848,10 @@ body:has(.standalone-page) .sidebar-decoration,
 }
 @media (max-width: 360px) {
   .post-header.post-sticky-mobile .page-header-logo,
-  .post-header.post-sticky-mobile .page-header-logo img { width: 92px; }
-  .post-sticky-actions { gap: 8px; }
+  .post-header.post-sticky-mobile .page-header-logo img { width: 88px; }
+  .post-header.post-sticky-mobile .post-sticky-profile { display: none; }
+  .post-sticky-actions { gap: 4px; }
+  .post-sticky-actions button { max-width: none; }
   .post-sticky-actions button svg { width: 20px; height: 20px; }
   .post-sticky-actions button span { font-size: 9px; }
 }
@@ -5287,6 +5294,70 @@ html.post-reader--dark .rich-post-content code {
     align-items: flex-start;
     gap: 10px;
   }
+}
+
+.settings-favicon-preview {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #d1dce6;
+  border-radius: 14px;
+  background: #eff3f7;
+}
+.settings-favicon-preview img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+.comment-like,
+.comment-reply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #64748b;
+  font: 700 12px "Open Sans", Arial, sans-serif;
+  cursor: pointer;
+}
+.comment-like svg {
+  width: 15px;
+  height: 15px;
+}
+.comment-like:hover,
+.comment-reply-btn:hover {
+  color: #0769c6;
+}
+.comment-like.is-liked {
+  color: #0769c6;
+}
+.comment-like:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+.comments article .comment-actions button {
+  margin-top: 0;
+}
+html.post-reader--dark .comment-like,
+html.post-reader--dark .comment-reply-btn {
+  color: #9eb0c6;
+}
+html.post-reader--dark .comment-like:hover,
+html.post-reader--dark .comment-reply-btn:hover {
+  color: #8cbcff;
+}
+html.post-reader--dark .comment-like.is-liked {
+  color: #8cbcff;
 }
 
 

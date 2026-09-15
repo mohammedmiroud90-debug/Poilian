@@ -10,16 +10,26 @@ const allowedTypes = new Set([
   "image/gif",
 ]);
 
+const typeFromName = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  return "";
+};
+
 export async function POST(request: Request) {
   if (!(await currentAdmin())) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   const file = (await request.formData()).get("file");
   if (!(file instanceof File) || file.size > 15 * 1024 * 1024) {
     return NextResponse.json({ error: "Upload a PDF or image smaller than 15 MB." }, { status: 400 });
   }
-  if (file.type && !allowedTypes.has(file.type)) {
+  const type = allowedTypes.has(file.type) ? file.type : typeFromName(file.name);
+  if (!type || !allowedTypes.has(type)) {
     return NextResponse.json({ error: "Upload a PDF, PNG, JPG, WebP, or GIF file." }, { status: 400 });
   }
-  const type = file.type || "application/octet-stream";
   const name = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-100) || "editor-file";
   if (r2Configured) {
     try {

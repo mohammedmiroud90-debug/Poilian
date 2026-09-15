@@ -3,12 +3,16 @@ import { adminWriteHeaders, currentAdmin, parseConfigured, url } from "@/lib/adm
 import { r2Configured, uploadToR2 } from "@/lib/r2";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const extensionOk = (name: string) => /\.(png|jpe?g|webp|gif)$/i.test(name);
 
 export async function POST(request: Request) {
   if (!(await currentAdmin())) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   const image = (await request.formData()).get("image");
-  if (!(image instanceof File) || !allowedTypes.has(image.type) || image.size > 5 * 1024 * 1024) {
+  if (!(image instanceof File) || image.size > 5 * 1024 * 1024) {
     return NextResponse.json({ error: "Upload a PNG, JPG, WebP, or GIF image smaller than 5 MB." }, { status: 400 });
+  }
+  if (!allowedTypes.has(image.type) || !extensionOk(image.name)) {
+    return NextResponse.json({ error: "Upload a PNG, JPG, WebP, or GIF image." }, { status: 400 });
   }
   const name = image.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-100) || "editor-image";
   if (r2Configured) {

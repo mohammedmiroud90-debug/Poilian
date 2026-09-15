@@ -28,7 +28,6 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
   const text = copy[locale];
 
   const [liked, setLiked] = useState(false);
-  const [followed, setFollowed] = useState(false);
   const [listening, setListening] = useState(false);
   const [audioLevels, setAudioLevels] = useState<number[]>(() => simulatedLevels(0, 16).map((value) => value * 0.3));
   const isPostView = pathname.startsWith("/posts/") && pathname !== "/posts";
@@ -156,18 +155,6 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
                 <path d="M7 11v10H4.5A1.5 1.5 0 0 1 3 19.5v-6A1.5 1.5 0 0 1 4.5 12H7Zm0 0 3.2-6.4A2.2 2.2 0 0 1 12.2 3.5h.3A2.5 2.5 0 0 1 15 6v3.5h4.2a2.3 2.3 0 0 1 2.3 2.7l-1.1 7.2A2.5 2.5 0 0 1 17.9 22H7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
               </svg>
               <span>Like</span>
-            </button>
-            <button
-              type="button"
-              className={followed ? "is-active" : ""}
-              onClick={() => setFollowed((value) => !value)}
-              aria-pressed={followed}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 3.5h12v17l-6-3.5-6 3.5v-17Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-                <path d="m12 8 .7 1.5 1.6.2-1.2 1.1.3 1.6L12 11.7l-1.4.7.3-1.6-1.2-1.1 1.6-.2L12 8Z" fill="currentColor" />
-              </svg>
-              <span>Follow</span>
             </button>
             <button type="button" className={`post-listen-action${listening ? " is-active is-playing" : ""}`} onClick={listenArticle} aria-pressed={listening}>
               <AudioWaveform compact playing={listening} levels={audioLevels} />

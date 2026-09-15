@@ -1,7 +1,7 @@
 import { allowedIframeSrc } from "@/lib/embed";
 
 export type Post = { id: string; slug: string; title: string; excerpt: string; content: string; contentHtml?: string; author: string; publishedAt: string; category: string; className?: "Article" | "BlogPost"; audioUrl?: string };
-export type Comment = { id: string; author: string; content: string; createdAt: string; parentId?: string; avatarUrl?: string };
+export type Comment = { id: string; author: string; content: string; createdAt: string; parentId?: string; avatarUrl?: string; likeCount?: number; className?: "Comment" | "BlogComment"; postId?: string };
 export type AnalyticsSummary = { posts: number; comments: number; views: number; viewsThisWeek: number; latestPost?: Post; topPosts: { title: string; slug: string; views: number }[]; activity: { date: string; views: number }[] };
 
 const url = process.env.PARSE_SERVER_URL ?? "";
@@ -28,14 +28,20 @@ const getHtmlContent = (value: unknown) => typeof value === "string" ? value.tri
 
 export function sanitizeHtml(html: string) {
   return html
-    .replace(/<(script|style|object|embed|form)[^>]*>[\s\S]*?<\/\1>/gi, "")
-    .replace(/<\/?(?:script|style|object|embed|form)[^>]*>/gi, "")
-    .replace(/<iframe\b([^>]*)>[\s\S]*?<\/iframe>/gi, (match, attrs) => {
-      const src = (attrs.match(/\bsrc\s*=\s*"([^"]+)"/i) || attrs.match(/\bsrc\s*=\s*'([^']+)'/i))?.[1] ?? "";
-      return allowedIframeSrc.test(src) ? `<iframe src="${src}" title="Embedded video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>` : "";
+    .replace(/<(script|style|object|embed|form|base|meta|link|svg|math)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<\/?(?:script|style|object|embed|form|base|meta|link|svg|math)[^>]*>/gi, "")
+    .replace(/<iframe\b([^>]*)>[\s\S]*?<\/iframe>/gi, (_match, attrs: string) => {
+      const src = (attrs.match(/\bsrc\s*=\s*"([^"]+)"/i) || attrs.match(/\bsrc\s*=\s*'([^']+)'/i) || attrs.match(/\bsrc\s*=\s*([^\s>]+)/i))?.[1] ?? "";
+      const clean = src.replace(/&amp;/gi, "&").trim();
+      return allowedIframeSrc.test(clean)
+        ? `<iframe src="${clean.replace(/"/g, "&quot;")}" title="Embedded video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
+        : "";
     })
     .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, "$1=\"#\"");
+    .replace(/(href|src|xlink:href)\s*=\s*(["']?)\s*(?:javascript|vbscript|data)\s*:/gi, '$1=$2#')
+    .replace(/(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, '$1="#"')
+    .replace(/&#0*58|&#x0*3a/gi, ":")
+    .replace(/(href|src)\s*=\s*(["']?)[^"'>\s]*javascript:/gi, '$1=$2#');
 }
 
 export function isRichHtmlContent(value = "") {
@@ -107,35 +113,83 @@ export async function getPosts(limit = 24): Promise<Post[]> {
     ? posts.sort((first, second) => Date.parse(second.publishedAt) - Date.parse(first.publishedAt))
     : fallback;
 }
-export async function getPost(slug: string) { return (await getPosts()).find((post) => post.slug === slug) ?? null; }
-export async function getComments(postId: string): Promise<Comment[]> {
-  // As with posts, support both the current and legacy Parse collections.
-  // Returning an empty Comment query early meant BlogComment rows were never
-  // shown in the admin, even though readers could see them on their post.
+export async function getPost(slug: string) {
+  const safe = slug.trim().slice(0, 180);
+  if (!safe) return null;
+  const results = await Promise.all(
+    (["Article", "BlogPost"] as const).map(async (className) => ({
+      className,
+      result: await query(className, {
+        where: JSON.stringify({ slug: safe, status: "published" }),
+        limit: "1",
+      }),
+    })),
+  );
+  for (const { className, result } of results) {
+    const item = result?.results?.[0];
+    if (item) return mapPost(item, className);
+  }
+  return fallback.find((post) => post.slug === safe) ?? null;
+}
+
+export async function getAdminPosts(limit = 200): Promise<Post[]> {
+  const capped = String(Math.min(Math.max(limit, 1), 500));
+  const results = await Promise.all(
+    (["Article", "BlogPost"] as const).map(async (className) => ({
+      className,
+      result: await query(className, {
+        order: "-updatedAt",
+        limit: capped,
+      }),
+    })),
+  );
+  const posts = results.flatMap(({ className, result }) =>
+    (result?.results ?? []).map((item) => mapPost(item, className)),
+  );
+  return posts.sort((first, second) => Date.parse(second.publishedAt) - Date.parse(first.publishedAt));
+}
+
+export async function getCommentsForPosts(postIds: string[]): Promise<Comment[]> {
+  const ids = [...new Set(postIds.map((id) => id.trim()).filter(Boolean))].slice(0, 200);
+  if (!ids.length) return [];
   const results = await Promise.all(
     ["Comment", "BlogComment"].map((className) =>
       query(className, {
-        where: JSON.stringify({ postId, isActive: { $ne: false } }),
+        where: JSON.stringify({ postId: { $in: ids }, isActive: { $ne: false } }),
         order: "createdAt",
-        limit: "100",
+        limit: "1000",
       }),
     ),
   );
-  return results
-    .flatMap((result) => result?.results ?? [])
-    .map((item) => ({
+  const mapped = results.flatMap((result, index) => {
+    const className = (["Comment", "BlogComment"] as const)[index];
+    return (result?.results ?? []).map((item) => ({
       id: String(item.objectId),
       author: commentAuthor(item),
       content: text(item.content || item.comment),
       createdAt: text(item.createdAt),
       parentId: text(item.parentId) || undefined,
       avatarUrl: text(item.avatarUrl || item.avatar || item.photo) || undefined,
-    }))
-    .sort((first, second) => Date.parse(first.createdAt) - Date.parse(second.createdAt));
+      likeCount: Math.max(0, Number(item.likeCount) || 0),
+      className,
+      postId: text(item.postId),
+    }));
+  });
+  const byId = new Map<string, (typeof mapped)[number]>();
+  for (const comment of mapped) {
+    const existing = byId.get(comment.id);
+    if (!existing || (existing.className === "BlogComment" && comment.className === "Comment")) {
+      byId.set(comment.id, comment);
+    }
+  }
+  return [...byId.values()].sort((first, second) => Date.parse(first.createdAt) - Date.parse(second.createdAt));
+}
+export async function getComments(postId: string): Promise<Comment[]> {
+  return getCommentsForPosts([postId]);
 }
 export async function getAnalytics(): Promise<AnalyticsSummary> {
-  const posts = await getPosts();
-  const comments = (await Promise.all(posts.map((post) => getComments(post.id)))).flat();
+  const posts = await getPosts(100);
+  const comments = await getCommentsForPosts(posts.map((post) => post.id));
   const pageViews = (await query("PageView", { order: "-createdAt", limit: "1000" }))?.results ?? [];
   const now = new Date();
   const days = Array.from({ length: 7 }, (_, index) => {
@@ -167,4 +221,14 @@ export async function getAnalytics(): Promise<AnalyticsSummary> {
     activity,
   };
 }
-export async function submitToParse(className: string, body: Record<string, unknown>) { if (!configured) return false; const response = await fetch(`${url}/classes/${className}`, { method: "POST", headers, body: JSON.stringify(body) }); return response.ok; }
+export async function submitToParse(className: string, body: Record<string, unknown>) {
+  if (!configured) return null;
+  const response = await fetch(`${url}/classes/${className}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) return null;
+  const result = (await response.json().catch(() => ({}))) as { objectId?: string };
+  return { objectId: result.objectId || "" };
+}
