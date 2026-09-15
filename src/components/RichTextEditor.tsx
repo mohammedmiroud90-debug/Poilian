@@ -10,8 +10,8 @@ import {
   forwardRef,
 } from "react";
 import { EditorIcons } from "@/components/EditorIcons";
-import { toVideoEmbedUrl, videoEmbedHtml } from "@/lib/embed";
-import { uploadEditorImage } from "@/lib/upload";
+import { imageEmbedHtml, pdfEmbedHtml, toVideoEmbedUrl, videoEmbedHtml } from "@/lib/embed";
+import { uploadEditorFile, uploadEditorImage } from "@/lib/upload";
 
 export type RichTextEditorHandle = {
   getHtml: () => string;
@@ -27,6 +27,7 @@ type Props = {
   className?: string;
   onChange?: (html: string) => void;
   showHelp?: boolean;
+  variant?: "default" | "medium";
 };
 
 const BLOCK_TAGS = new Set(["p", "h1", "h2", "h3", "blockquote", "pre"]);
@@ -70,22 +71,27 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
     className = "",
     onChange,
     showHelp = true,
+    variant = "default",
   },
   ref,
 ) {
   const editor = useRef<HTMLDivElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const insertRef = useRef<HTMLDivElement>(null);
   const savedSelection = useRef<Range | null>(null);
   const [block, setBlock] = useState("p");
   const [notice, setNotice] = useState("");
   const [uploading, setUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
   const [mode, setMode] = useState<"rich" | "markdown">("rich");
+  const [insertOpen, setInsertOpen] = useState(false);
   const [floatBar, setFloatBar] = useState<{ show: boolean; x: number; y: number }>({
     show: false,
     x: 0,
     y: 0,
   });
+  const isMedium = variant === "medium";
 
   useImperativeHandle(ref, () => ({
     getHtml: () => editor.current?.innerHTML || "",
@@ -113,19 +119,30 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
       if (
         target &&
         (editor.current?.contains(target) ||
-          (target instanceof Element && target.closest(".selection-float-toolbar")))
+          (target instanceof Element && target.closest(".selection-float-toolbar")) ||
+          insertRef.current?.contains(target as Node))
       ) {
         return;
       }
       hideFloatingToolbar();
+      setInsertOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || !editor.current?.contains(document.activeElement)) return;
+      if (event.key === "b") { event.preventDefault(); command("bold"); }
+      if (event.key === "i") { event.preventDefault(); command("italic"); }
+      if (event.key === "k") { event.preventDefault(); link(); }
+      if (event.key === "u") { event.preventDefault(); command("underline"); }
     }
     window.addEventListener("scroll", onScrollOrResize, true);
     window.addEventListener("resize", onScrollOrResize);
     document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("scroll", onScrollOrResize, true);
       window.removeEventListener("resize", onScrollOrResize);
       document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onKey);
     };
   }, [floatBar.show]);
 
@@ -245,6 +262,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
   }
 
   function video() {
+    setInsertOpen(false);
     const value = prompt("Paste a YouTube or Vimeo link");
     if (!value) return;
     const embedUrl = toVideoEmbedUrl(value);
@@ -253,6 +271,45 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
       return;
     }
     command("insertHTML", `${videoEmbedHtml(embedUrl)}<p><br></p>`);
+  }
+
+  function imageUrl() {
+    setInsertOpen(false);
+    const value = prompt("Paste image URL");
+    if (!value?.trim()) return;
+    command("insertHTML", `${imageEmbedHtml(value.trim())}<p><br></p>`);
+    setNotice("Image inserted.");
+  }
+
+  function pdfFromUrl() {
+    setInsertOpen(false);
+    const value = prompt("Paste PDF URL");
+    if (!value?.trim()) return;
+    const title = prompt("PDF title (optional)") || "View PDF";
+    command("insertHTML", `${pdfEmbedHtml(value.trim(), title)}<p><br></p>`);
+    setNotice("PDF embedded.");
+  }
+
+  async function onFileSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setNotice("Uploading file…");
+    try {
+      const url = await uploadEditorFile(file);
+      if (file.type === "application/pdf") {
+        command("insertHTML", `${pdfEmbedHtml(url, file.name)}<p><br></p>`);
+      } else {
+        command("insertHTML", `${imageEmbedHtml(url, file.name)}<p><br></p>`);
+      }
+      setNotice("File inserted.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+      setInsertOpen(false);
+    }
   }
 
   async function onImageSelected(event: ChangeEvent<HTMLInputElement>) {
@@ -277,18 +334,29 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
 
   const words = wordCount(editor.current?.innerHTML || initialHtml);
 
-  return (
-    <div className={`rich-text-editor ${className}`.trim()}>
-      <div className="rich-text-editor-label">
-        <strong>
-          {label}
-          <span aria-hidden="true">*</span>
-        </strong>
-        <p>{hint}</p>
-      </div>
-
-      <div className="editor-card so-editor-card">
-        <div className="so-toolbar so-toolbar-rich" role="toolbar" aria-label="Formatting">
+  const toolbar = (
+    <>
+          <div className="editor-insert-wrap" ref={insertRef}>
+            <button
+              type="button"
+              className={`editor-insert-btn${insertOpen ? " is-open" : ""}`}
+              title="Insert media"
+              aria-expanded={insertOpen}
+              onClick={() => setInsertOpen((open) => !open)}
+            >
+              <EditorIcons.Plus />
+            </button>
+            {insertOpen && (
+              <div className="editor-insert-menu" role="menu">
+                <button type="button" role="menuitem" onClick={() => { setInsertOpen(false); imageInput.current?.click(); }} disabled={uploading}>Upload image</button>
+                <button type="button" role="menuitem" onClick={imageUrl}>Image from URL</button>
+                <button type="button" role="menuitem" onClick={video}>YouTube / Vimeo</button>
+                <button type="button" role="menuitem" onClick={() => { setInsertOpen(false); fileInput.current?.click(); }} disabled={uploading}>Upload PDF</button>
+                <button type="button" role="menuitem" onClick={pdfFromUrl}>PDF from URL</button>
+                <button type="button" role="menuitem" onClick={() => { setInsertOpen(false); command("insertHorizontalRule"); }}>Divider</button>
+              </div>
+            )}
+          </div>
           <div className="so-toolbar-group">
             <label className="so-heading-select">
               <span className="sr-only">Text style</span>
@@ -315,11 +383,14 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             <button type="button" title="Strikethrough" onClick={() => command("strikeThrough")}>
               <EditorIcons.Strike />
             </button>
+            <button type="button" title="Underline" onClick={() => command("underline")}>
+              <EditorIcons.Underline />
+            </button>
           </div>
 
-          <i className="so-toolbar-sep" />
+          <i className="so-toolbar-sep so-toolbar-sep-desktop" />
 
-          <div className="so-toolbar-group">
+          <div className="so-toolbar-group so-toolbar-group-desktop">
             <button
               type="button"
               title="Inline code"
@@ -365,8 +436,17 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             <button type="button" title="Align left" onClick={() => command("justifyLeft")}>
               <EditorIcons.Align />
             </button>
+            <button type="button" title="Decrease indent" onClick={() => command("outdent")}>
+              <EditorIcons.Outdent />
+            </button>
+            <button type="button" title="Increase indent" onClick={() => command("indent")}>
+              <EditorIcons.Indent />
+            </button>
             <button type="button" title="Video embed" onClick={video}>
               <EditorIcons.Video />
+            </button>
+            <button type="button" title="PDF" onClick={pdfFromUrl}>
+              <EditorIcons.Pdf />
             </button>
             <button type="button" title="Horizontal rule" onClick={() => command("insertHorizontalRule")}>
               <EditorIcons.Hr />
@@ -376,9 +456,9 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             </button>
           </div>
 
-          <i className="so-toolbar-sep" />
+          <i className="so-toolbar-sep so-toolbar-sep-desktop" />
 
-          <div className="so-toolbar-group">
+          <div className="so-toolbar-group so-toolbar-group-desktop">
             <button type="button" title="Undo" onClick={() => command("undo")}>
               <EditorIcons.Undo />
             </button>
@@ -392,7 +472,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             )}
           </div>
 
-          <div className="so-toolbar-modes" role="group" aria-label="Editor view">
+          <div className="so-toolbar-modes so-toolbar-modes-desktop" role="group" aria-label="Editor view">
             <button
               type="button"
               className={mode === "rich" ? "is-active" : ""}
@@ -410,6 +490,24 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
               <EditorIcons.ViewMd />
             </button>
           </div>
+    </>
+  );
+
+  return (
+    <div className={`rich-text-editor${isMedium ? " is-medium" : ""} ${className}`.trim()}>
+      <div className="rich-text-editor-label">
+        <strong>
+          {label}
+          <span aria-hidden="true">*</span>
+        </strong>
+        <p>{hint}</p>
+      </div>
+
+      <div className="editor-card so-editor-card medium-editor-shell">
+        <div className="editor-sticky-rail">
+          <div className="so-toolbar so-toolbar-rich" role="toolbar" aria-label="Formatting">
+            {toolbar}
+          </div>
         </div>
 
         <input
@@ -418,6 +516,13 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
           accept="image/png,image/jpeg,image/webp,image/gif"
           hidden
           onChange={(event) => void onImageSelected(event)}
+        />
+        <input
+          ref={fileInput}
+          type="file"
+          accept="application/pdf,image/png,image/jpeg,image/webp,image/gif,.pdf"
+          hidden
+          onChange={(event) => void onFileSelected(event)}
         />
 
         {selectedImage && (
@@ -462,7 +567,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
         )}
 
         <div
-          className="rich-editor stack-editor so-stack-editor"
+          className={`rich-editor stack-editor so-stack-editor${isMedium ? " medium-editor-body" : ""}`}
           ref={editor}
           contentEditable
           suppressContentEditableWarning
@@ -544,8 +649,19 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             {words} words · {Math.max(1, Math.ceil(words / 220))} min read
             {notice ? ` · ${notice}` : ""}
           </span>
-          <span>Select text for the floating format bar</span>
+          <span>{isMedium ? "Toolbar stays visible while you scroll · select text for quick format" : "Select text for the floating format bar"}</span>
         </footer>
+
+        {isMedium && (
+          <div className="editor-mobile-dock" role="toolbar" aria-label="Quick formatting">
+            <button type="button" title="Insert" onClick={() => setInsertOpen((open) => !open)}><EditorIcons.Plus /></button>
+            <button type="button" title="Bold" onClick={() => command("bold")}><EditorIcons.Bold /></button>
+            <button type="button" title="Italic" onClick={() => command("italic")}><EditorIcons.Italic /></button>
+            <button type="button" title="Link" onClick={link}><EditorIcons.Link /></button>
+            <button type="button" title="Image" onClick={() => imageInput.current?.click()} disabled={uploading}><EditorIcons.Image /></button>
+            <button type="button" title="Video" onClick={video}><EditorIcons.Video /></button>
+          </div>
+        )}
       </div>
     </div>
   );

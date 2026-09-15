@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SiteLogo } from "@/components/SiteLogo";
 
 export const metadata: Metadata = {
   title: "Services",
@@ -62,7 +63,7 @@ export default function ServicesPage() {
     <main className="standalone-page bitti-board bitti-services">
       <div className="bitti-board-brand">
         <Link href="/en" className="bitti-brand-mark" aria-label="Bitt-i.com home">
-          <img src="/Bitti.png" alt="Bitt-i.com" width={168} height={44} />
+          <SiteLogo alt="Bitt-i.com" width={168} height={44} />
         </Link>
         <nav aria-label="Standalone links">
           <Link href="/market">Marketplace</Link>

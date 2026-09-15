@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Locale } from "@/components/LanguageSelect";
 import { FooterDottedMap } from "@/components/FooterDottedMap";
+import { SiteLogo } from "@/components/SiteLogo";
 
 const copy: Record<Locale, { description: string; admin: string; rights: string; links: [string, string, string, string, string] }> = {
   en: { description: "Stories, research and local insight from Algeria.", admin: "Admin login", rights: "All Rights Reserved.", links: ["Home", "Posts", "Projects", "About", "Contact"] },
@@ -33,7 +33,7 @@ export function BlogFooter() {
           <div className="reference-footer-top">
             <div className="reference-footer-brand">
               <Link className="reference-footer-logo" href="/en" aria-label="Poilian home">
-                <Image src="/Bitti.png" alt="Poilian" width={180} height={74} />
+                <SiteLogo alt="Poilian" width={180} height={74} />
               </Link>
               <p>{text.description}</p>
             </div>

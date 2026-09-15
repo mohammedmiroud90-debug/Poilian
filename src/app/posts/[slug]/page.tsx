@@ -7,6 +7,8 @@ import { BlogHeader } from "@/components/BlogHeader";
 import { CommentSection } from "@/components/CommentSection";
 import { ContributeCard } from "@/components/ContributeCard";
 import { InboxNewsletter } from "@/components/InboxNewsletter";
+import { PostListen } from "@/components/PostListen";
+import { PostReaderControls } from "@/components/PostReaderControls";
 import { PostTools } from "@/components/PostTools";
 import { PostAuthor } from "@/components/PostAuthor";
 import { CodeBlock } from "@/components/CodeBlock";
@@ -25,6 +27,14 @@ type Block = {
   id?: string;
   alt?: string;
 };
+function readingTime(text: string): number {
+  const words = text
+    .replace(/<[^>]+>/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 220));
+}
 const idFrom = (value: string, index: number) =>
   `${
     value
@@ -211,6 +221,7 @@ export default async function PostPage({
     keywords: tags,
   };
   
+  const minutesToRead = readingTime(post.contentHtml || post.content || "");
   let processedHtmlContent = post.contentHtml;
   if (hasHtmlContent && headings.length > 0) {
     let headingIndex = 0;
@@ -286,26 +297,37 @@ export default async function PostPage({
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <BlogHeader category={post.slug === "cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats" ? post.category : undefined} />
+      <BlogHeader category={post.slug === "cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats" ? post.category : undefined} audioUrl={post.audioUrl?.trim() || undefined} />
       <main className="content-page post-page">
         <PostTools title={post.title} />
         {admin && <InlinePostEditor post={post} />}
         <Link href="/posts" className="back-link">
           ← All posts
         </Link>
-        <div className="author-profile">
-          <img className="author-avatar" src={authorProfile.avatarUrl} alt={`Portrait of ${authorProfile.name}`} width={27} height={27} />
-          <span>Written by</span>
-          <strong>{authorProfile.name}</strong>
-          <aside className="author-hover-card" aria-label={`About ${authorProfile.name}`}><b>{authorPostCount} {authorPostCount === 1 ? "post" : "posts"}</b><span>{authorProfile.bio}</span><a href={authorProfile.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn profile <i aria-hidden="true">↗</i></a></aside>
+        <div className="post-author-row">
+          <div className="author-profile">
+            <img className="author-avatar" src={authorProfile.avatarUrl} alt={`Portrait of ${authorProfile.name}`} width={27} height={27} />
+            <span>Written by</span>
+            <strong>{authorProfile.name}</strong>
+            <aside className="author-hover-card" aria-label={`About ${authorProfile.name}`}><b>{authorPostCount} {authorPostCount === 1 ? "post" : "posts"}</b><span>{authorProfile.bio}</span><a href={authorProfile.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn profile <i aria-hidden="true">↗</i></a></aside>
+          </div>
+          <PostReaderControls />
         </div>
         <p className="post-meta">
           {post.category} · {new Date(post.publishedAt).toLocaleDateString()}
+          <span className="post-reading-time" title={`${minutesToRead} min read`}>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M8 4.6V8l2.6 1.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {minutesToRead} min read
+          </span>
         </p>
         <div className={`post-tags${usesTanklager ? " tanklager-tags" : ""}`} aria-label="Article tags">
           {tags.map((tag) => <Link href={`/posts?category=${encodeURIComponent(tag)}`} key={tag}>#{tag}</Link>)}
         </div>
         <h1 className={usesTanklager ? "tanklager-title" : undefined}>{post.title}</h1>
+        {post.audioUrl?.trim() ? <PostListen src={post.audioUrl.trim()} title={post.title} /> : null}
         <p className="page-intro">{post.excerpt}</p>
         <section className="post-reading-layout">
           {article}

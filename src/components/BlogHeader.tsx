@@ -1,10 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { LanguageSelect, type Locale } from "@/components/LanguageSelect";
+import { SiteLogo } from "@/components/SiteLogo";
+import { AudioWaveform, simulatedLevels } from "@/components/AudioWaveform";
+import { togglePostAudio, POST_AUDIO_LEVELS, POST_AUDIO_STATE } from "@/components/PostListen";
 
 const copy = {
   en: { links: ["Blog posts", "Companies", "Personal notes", "Photography", "About me"], search: "Search posts", submit: "Search", menu: "Open menu" },
@@ -14,7 +16,7 @@ const copy = {
 const paths = ["/posts", "/projects", "/notes", "/photography", "/about"];
 type NavigationPage = { slug: string; navigationLabel: string };
 
-export function BlogHeader({ pages: initialPages = [], category }: { pages?: NavigationPage[]; category?: string }) {
+export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { pages?: NavigationPage[]; category?: string; audioUrl?: string }) {
   const pathname = usePathname();
   const [pages, setPages] = useState<NavigationPage[]>(initialPages);
   const [locale, setLocale] = useState<Locale>("en");
@@ -27,6 +29,8 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
 
   const [liked, setLiked] = useState(false);
   const [followed, setFollowed] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [audioLevels, setAudioLevels] = useState<number[]>(() => simulatedLevels(0, 16).map((value) => value * 0.3));
   const isPostView = pathname.startsWith("/posts/") && pathname !== "/posts";
 
   useEffect(() => { 
@@ -39,6 +43,31 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
     window.addEventListener("scroll", update, { passive: true }); 
     return () => window.removeEventListener("scroll", update); 
   }, []);
+
+  useEffect(() => {
+    const onState = (event: Event) => setListening(Boolean((event as CustomEvent<{ playing?: boolean }>).detail?.playing));
+    const onLevels = (event: Event) => {
+      const next = (event as CustomEvent<{ levels?: number[] }>).detail?.levels;
+      if (next?.length) setAudioLevels(next);
+    };
+    window.addEventListener(POST_AUDIO_STATE, onState);
+    window.addEventListener(POST_AUDIO_LEVELS, onLevels);
+    return () => {
+      window.removeEventListener(POST_AUDIO_STATE, onState);
+      window.removeEventListener(POST_AUDIO_LEVELS, onLevels);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!listening || audioUrl) return;
+    let frame = 0;
+    const tick = (time: number) => {
+      setAudioLevels(simulatedLevels(time, 16));
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [listening, audioUrl]);
   
   useEffect(() => { if (searchOpen) inputRef.current?.focus(); }, [searchOpen]);
   
@@ -59,14 +88,24 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
   function closeMenu() { setMenuOpen(false); }
 
   function listenArticle() {
+    if (audioUrl?.trim() && document.getElementById("post-listen")) {
+      togglePostAudio();
+      return;
+    }
     if (typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      setListening(false);
+      return;
+    }
     const title = document.querySelector(".post-page h1")?.textContent?.trim();
     const intro = document.querySelector(".post-page .page-intro")?.textContent?.trim();
     const textToSpeak = [title, intro].filter(Boolean).join(". ");
     if (!textToSpeak) return;
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.rate = 1;
+    utterance.onend = () => setListening(false);
+    setListening(true);
     window.speechSynthesis.speak(utterance);
   }
 
@@ -100,7 +139,7 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
           </button>
           
           <Link className="page-header-logo" href="/en">
-            <Image src="/Bitti.png" alt="Bitt-i.com" width={158} height={40} priority />
+            <SiteLogo alt="Bitt-i.com" width={158} height={40} priority />
           </Link>
         </div>
 
@@ -130,12 +169,9 @@ export function BlogHeader({ pages: initialPages = [], category }: { pages?: Nav
               </svg>
               <span>Follow</span>
             </button>
-            <button type="button" onClick={listenArticle}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4.5 13.5v-2A7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 7.5 7.5v2" fill="none" stroke="currentColor" strokeWidth="1.7" />
-                <path d="M4.5 13.5A2.5 2.5 0 0 0 7 16h1v-5H7a2.5 2.5 0 0 0-2.5 2.5Zm15 0A2.5 2.5 0 0 1 17 16h-1v-5h1a2.5 2.5 0 0 1 2.5 2.5Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-              </svg>
-              <span>Listen</span>
+            <button type="button" className={`post-listen-action${listening ? " is-active is-playing" : ""}`} onClick={listenArticle} aria-pressed={listening}>
+              <AudioWaveform compact playing={listening} levels={audioLevels} />
+              <span>{listening ? "Pause" : "Listen"}</span>
             </button>
             <button type="button" onClick={scrollToThread}>
               <svg viewBox="0 0 24 24" aria-hidden="true">

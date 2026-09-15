@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import type { Post } from "@/lib/parse";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichTextEditor";
 
@@ -15,18 +15,20 @@ const blank = (): Draft => ({
   category: "Personal notes",
   className: "Article",
   status: "published",
+  audioUrl: "",
 });
 
 export function PostManager({ initialPosts }: { initialPosts: Post[] }) {
   const [posts, setPosts] = useState(initialPosts);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [notice, setNotice] = useState("");
+  const [uploadingAudio, setUploadingAudio] = useState(false);
   const editorRef = useRef<RichTextEditorHandle>(null);
 
   const update = (key: keyof Draft, value: string) => draft && setDraft({ ...draft, [key]: value });
 
   function edit(post: Post) {
-    const next: Draft = { ...post, status: "published", content: post.contentHtml || post.content };
+    const next: Draft = { ...post, status: "published", content: post.contentHtml || post.content, audioUrl: post.audioUrl || "" };
     setDraft(next);
     setNotice("");
     requestAnimationFrame(() => {
@@ -46,7 +48,7 @@ export function PostManager({ initialPosts }: { initialPosts: Post[] }) {
   async function save() {
     if (!draft) return;
     const content = editorRef.current?.getHtml() || draft.content;
-    const payload = { ...draft, content };
+    const payload = { ...draft, content, audioUrl: draft.audioUrl || "" };
     setNotice("Saving…");
     const response = await fetch("/api/admin/posts", {
       method: "POST",
@@ -80,6 +82,25 @@ export function PostManager({ initialPosts }: { initialPosts: Post[] }) {
       setDraft(null);
       setNotice("Post deleted.");
     }
+  }
+
+  async function uploadAudio(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !draft) return;
+    setUploadingAudio(true);
+    setNotice("Uploading audio…");
+    const form = new FormData();
+    form.set("audio", file);
+    const response = await fetch("/api/admin/media/audio", { method: "POST", body: form });
+    const result = await response.json() as { url?: string; error?: string };
+    if (response.ok && result.url) {
+      setDraft({ ...draft, audioUrl: result.url });
+      setNotice("Audio uploaded. Save the post to publish it.");
+    } else {
+      setNotice(result.error || "Audio upload failed.");
+    }
+    setUploadingAudio(false);
+    event.target.value = "";
   }
 
   return (
@@ -171,13 +192,38 @@ export function PostManager({ initialPosts }: { initialPosts: Post[] }) {
                 />
               </label>
 
+              <div className="post-audio-field">
+                <label>
+                  Full-post listen audio
+                  <input
+                    value={draft.audioUrl || ""}
+                    onChange={(event) => update("audioUrl", event.target.value)}
+                    placeholder="https://… or upload an MP3 of the full article"
+                  />
+                </label>
+                <label className="post-audio-upload">
+                  Upload audio
+                  <input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,audio/aac,.mp3,.wav,.ogg,.m4a" onChange={(event) => void uploadAudio(event)} disabled={uploadingAudio} />
+                  <span>{uploadingAudio ? "Uploading…" : "Choose audio file"}</span>
+                </label>
+                {draft.audioUrl ? (
+                  <div className="post-audio-preview">
+                    <audio controls src={draft.audioUrl} />
+                    <button type="button" onClick={() => update("audioUrl", "")}>Remove audio</button>
+                  </div>
+                ) : (
+                  <p>Add a recording of the full post. The Listen control and the under-title player appear only after this is saved.</p>
+                )}
+              </div>
+
               <RichTextEditor
                 ref={editorRef}
                 key={draft.id || "new-post"}
                 initialHtml={draft.content}
+                variant="medium"
                 label="Body"
-                hint="Include all the information someone would need to read your article. Headings, lists and embeds preview live below."
-                placeholder="Start writing…"
+                hint="Write like Medium: sticky toolbar, insert menu for images, video, PDF, and dividers. Formatting previews live as you type."
+                placeholder="Tell your story…"
                 onChange={(html) => update("content", html)}
               />
 
@@ -203,16 +249,20 @@ export function PostManager({ initialPosts }: { initialPosts: Post[] }) {
                   <span>Use Heading 1–3 from the style menu — sizes show live in the editor.</span>
                 </li>
                 <li>
-                  <strong>Images</strong>
-                  <span>Upload from the image tool; click an image to resize or remove it.</span>
+                  <strong>Insert menu</strong>
+                  <span>Use the + button for images, video, PDF files, and dividers without scrolling to the top.</span>
+                </li>
+                <li>
+                  <strong>Images &amp; PDF</strong>
+                  <span>Upload or paste a URL. PDFs embed inline with a download link.</span>
                 </li>
                 <li>
                   <strong>Video</strong>
                   <span>Paste a YouTube or Vimeo URL to embed a player.</span>
                 </li>
                 <li>
-                  <strong>Shortcuts</strong>
-                  <span>Ctrl+B bold · Ctrl+I italic · lists and quotes from the toolbar.</span>
+                  <strong>Listen</strong>
+                  <span>Upload a full-post audio file to show the Listen player under the title and in the header.</span>
                 </li>
               </ul>
             </aside>

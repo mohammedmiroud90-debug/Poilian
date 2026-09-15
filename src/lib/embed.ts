@@ -15,3 +15,15 @@ export const allowedIframeSrc = /^https:\/\/(www\.)?(youtube(-nocookie)?\.com\/e
 export function videoEmbedHtml(embedUrl: string) {
   return `<div class="video-embed" contenteditable="false"><iframe src="${embedUrl}" title="Embedded video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
 }
+
+export function pdfEmbedHtml(url: string, title = "View PDF") {
+  const safeUrl = url.replace(/"/g, "&quot;");
+  const safeTitle = title.replace(/"/g, "&quot;");
+  return `<div class="pdf-embed" contenteditable="false"><a class="pdf-embed-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeTitle}</a><iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe></div>`;
+}
+
+export function imageEmbedHtml(url: string, alt = "") {
+  const safeUrl = url.replace(/"/g, "&quot;");
+  const safeAlt = alt.replace(/"/g, "&quot;");
+  return `<figure class="editor-figure"><img src="${safeUrl}" alt="${safeAlt}" /><figcaption contenteditable="true">Add a caption…</figcaption></figure>`;
+}

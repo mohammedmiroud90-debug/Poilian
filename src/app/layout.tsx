@@ -6,6 +6,8 @@ import { AutoTranslate } from "@/components/AutoTranslate";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 import { PageLoader } from "@/components/PageLoader";
 import { SidebarDecoration } from "@/components/SidebarDecoration";
+import { SiteBrandingProvider } from "@/components/SiteLogo";
+import { getAuthorProfile } from "@/lib/profile";
 import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -41,17 +43,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const profile = await getAuthorProfile();
   return (
     <html lang="en">
       <body>
-        <PageLoader />
-        <SidebarDecoration />
-        {children}
-        <BlogFooter />
-        <CookieBanner />
-        <AutoTranslate />
-        <AnalyticsTracker />
+        <SiteBrandingProvider logoUrl={profile.logoUrl} commentAvatarUrl={profile.commentAvatarUrl}>
+          <PageLoader />
+          <SidebarDecoration />
+          {children}
+          <BlogFooter />
+          <CookieBanner />
+          <AutoTranslate />
+          <AnalyticsTracker />
+        </SiteBrandingProvider>
       </body>
     </html>
   );

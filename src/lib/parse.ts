@@ -1,7 +1,7 @@
 import { allowedIframeSrc } from "@/lib/embed";
 
-export type Post = { id: string; slug: string; title: string; excerpt: string; content: string; contentHtml?: string; author: string; publishedAt: string; category: string; className?: "Article" | "BlogPost" };
-export type Comment = { id: string; author: string; content: string; createdAt: string; parentId?: string };
+export type Post = { id: string; slug: string; title: string; excerpt: string; content: string; contentHtml?: string; author: string; publishedAt: string; category: string; className?: "Article" | "BlogPost"; audioUrl?: string };
+export type Comment = { id: string; author: string; content: string; createdAt: string; parentId?: string; avatarUrl?: string };
 export type AnalyticsSummary = { posts: number; comments: number; views: number; viewsThisWeek: number; latestPost?: Post; topPosts: { title: string; slug: string; views: number }[]; activity: { date: string; views: number }[] };
 
 const url = process.env.PARSE_SERVER_URL ?? "";
@@ -64,7 +64,8 @@ const mapPost = (item: Record<string, unknown>, className?: "Article" | "BlogPos
     author: text(item.author) || "Belhachemia Mohammed",
     publishedAt: dateText(item.publishedAt) || dateText(item.createdAt) || new Date().toISOString(),
     category: text(item.category || item.type) || "Personal notes",
-    className
+    className,
+    audioUrl: text(item.audioUrl) || undefined,
   };
 };
 
@@ -128,6 +129,7 @@ export async function getComments(postId: string): Promise<Comment[]> {
       content: text(item.content || item.comment),
       createdAt: text(item.createdAt),
       parentId: text(item.parentId) || undefined,
+      avatarUrl: text(item.avatarUrl || item.avatar || item.photo) || undefined,
     }))
     .sort((first, second) => Date.parse(first.createdAt) - Date.parse(second.createdAt));
 }
