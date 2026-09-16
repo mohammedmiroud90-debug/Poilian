@@ -46,8 +46,8 @@ export function getEmailConfig(): EmailConfig {
   const smtpPort = Number(process.env.SMTP_PORT || "587");
   const smtpSecure = process.env.SMTP_SECURE === "true" || smtpPort === 465;
 
-  const smtpReady = Boolean(smtpHost && smtpUser && smtpPass);
-  const enabled = Boolean(resendApiKey || smtpReady);
+  // Workers / vinext: only Resend (HTTP). Do not treat SMTP as enabled — nodemailer is not bundled.
+  const enabled = Boolean(resendApiKey);
 
   return {
     enabled,

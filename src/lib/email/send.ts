@@ -41,36 +41,6 @@ async function sendViaResend(email: OutboundEmail, apiKey: string, from: string)
   return true;
 }
 
-async function sendViaSmtp(email: OutboundEmail, from: string) {
-  const config = getEmailConfig();
-  let nodemailer: typeof import("nodemailer");
-  try {
-    nodemailer = await import("nodemailer");
-  } catch {
-    throw new Error(
-      "SMTP is configured but nodemailer is not installed. Run: yarn add nodemailer && yarn add -D @types/nodemailer",
-    );
-  }
-  const transport = nodemailer.createTransport({
-    host: config.smtp.host,
-    port: config.smtp.port,
-    secure: config.smtp.secure,
-    auth: {
-      user: config.smtp.user,
-      pass: config.smtp.pass,
-    },
-  });
-  await transport.sendMail({
-    from,
-    to: normalizeRecipients(email.to).join(", "),
-    subject: email.subject,
-    html: email.html,
-    text: email.text,
-    replyTo: email.replyTo,
-  });
-  return true;
-}
-
 async function queueEmailLog(email: OutboundEmail, status: "sent" | "skipped" | "failed", detail?: string) {
   try {
     await submitToParse("SiteEmailLog", {
@@ -85,7 +55,11 @@ async function queueEmailLog(email: OutboundEmail, status: "sent" | "skipped" | 
   }
 }
 
-/** Sends site mail when configured; otherwise logs and stores a Parse audit row. */
+/**
+ * Sends site mail via Resend (fetch). Compatible with Cloudflare Workers.
+ * SMTP/nodemailer is not used — Workers cannot resolve or run nodemailer.
+ * Set RESEND_API_KEY in Cloudflare bindings / .env.local.
+ */
 export async function sendSiteEmail(email: OutboundEmail) {
   const config = getEmailConfig();
   const recipients = normalizeRecipients(email.to);
@@ -94,20 +68,19 @@ export async function sendSiteEmail(email: OutboundEmail) {
     return { ok: false, skipped: true as const };
   }
 
-  if (!config.enabled) {
+  if (!config.resendApiKey) {
     if (process.env.NODE_ENV === "development") {
       console.info("[email:preview]", email.subject, "→", recipients.join(", "));
     }
-    await queueEmailLog(email, "skipped", "Email transport not configured (set RESEND_API_KEY or SMTP_*)");
+    const detail = config.smtp.host
+      ? "SMTP is set but Workers builds require RESEND_API_KEY (nodemailer is not bundled)."
+      : "Email transport not configured (set RESEND_API_KEY)";
+    await queueEmailLog(email, "skipped", detail);
     return { ok: false, skipped: true as const };
   }
 
   try {
-    if (config.resendApiKey) {
-      await sendViaResend(email, config.resendApiKey, config.from);
-    } else {
-      await sendViaSmtp(email, config.from);
-    }
+    await sendViaResend(email, config.resendApiKey, config.from);
     await queueEmailLog(email, "sent");
     return { ok: true as const };
   } catch (error) {
