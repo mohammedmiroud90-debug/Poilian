@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Open_Sans } from "next/font/google";
 import "./globals.css";
 import { CookieBanner } from "@/components/CookieBanner";
 import { BlogFooter } from "@/components/BlogFooter";
 import { AutoTranslate } from "@/components/AutoTranslate";
+import { LocaleBootstrap } from "@/components/LocaleBootstrap";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 import { PageLoader } from "@/components/PageLoader";
 import { SidebarDecoration } from "@/components/SidebarDecoration";
@@ -10,6 +12,13 @@ import { SiteBrandingProvider } from "@/components/SiteLogo";
 import { resolveFaviconUrl } from "@/lib/branding";
 import { getAuthorProfile } from "@/lib/profile";
 import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/lib/seo";
+
+const openSans = Open_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "600", "700"],
+  variable: "--font-open-sans",
+  display: "swap",
+});
 
 export const dynamic = "force-dynamic";
 
@@ -71,9 +80,17 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const profile = await getAuthorProfile();
   return (
-    <html lang="en">
+    <html lang="en" className={openSans.variable} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=document.cookie.match(/poilian-locale=(en|fr|ar)/);if(m){document.documentElement.lang=m[1];document.documentElement.dir=m[1]==='ar'?'rtl':'ltr';}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <SiteBrandingProvider logoUrl={profile.logoUrl} commentAvatarUrl={profile.commentAvatarUrl}>
+          <LocaleBootstrap />
           <PageLoader />
           <SidebarDecoration />
           {children}

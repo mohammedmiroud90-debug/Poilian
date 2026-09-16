@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import type { Locale } from "@/components/LanguageSelect";
+import { usePoilianLocale } from "@/hooks/usePoilianLocale";
 import { FooterDottedMap } from "@/components/FooterDottedMap";
 import { SiteLogo } from "@/components/SiteLogo";
 
@@ -13,17 +13,7 @@ const copy: Record<Locale, { description: string; admin: string; rights: string;
 };
 
 export function BlogFooter() {
-  const [locale, setLocale] = useState<Locale>("en");
-  useEffect(() => {
-    const update = (next?: Locale) => {
-      const saved = next || localStorage.getItem("poilian-locale");
-      if (saved === "en" || saved === "fr" || saved === "ar") setLocale(saved);
-    };
-    update();
-    const listener = (event: Event) => update((event as CustomEvent<Locale>).detail);
-    window.addEventListener("poilian-locale-change", listener);
-    return () => window.removeEventListener("poilian-locale-change", listener);
-  }, []);
+  const [locale] = usePoilianLocale();
   const text = copy[locale];
   return (
     <footer className="personal-footer poilian-locale-copy reference-footer-wrap" dir={locale === "ar" ? "rtl" : "ltr"}>

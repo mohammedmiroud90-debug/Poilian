@@ -8,6 +8,9 @@ export function AnalyticsTracker() {
   const pathname = usePathname();
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
+    if (typeof window !== "undefined" && window.localStorage.getItem("poilian-personal-cookie-consent") === "necessary") {
+      return;
+    }
     const key = `poilian-page-view:${pathname}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");

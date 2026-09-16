@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { applyDocumentLocale, getStoredLocale, isLocale, type Locale } from "@/lib/locale";
 
-export type Locale = "en" | "fr" | "ar";
+export type { Locale };
 
 const locales: { value: Locale; label: string }[] = [
   { value: "en", label: "English" },
@@ -11,8 +12,13 @@ const locales: { value: Locale; label: string }[] = [
 ];
 
 function persist(locale: Locale) {
-  localStorage.setItem("poilian-locale", locale);
+  try {
+    localStorage.setItem("poilian-locale", locale);
+  } catch {
+    /* private mode */
+  }
   document.cookie = `poilian-locale=${locale};path=/;max-age=31536000;SameSite=Lax`;
+  applyDocumentLocale(locale);
   window.dispatchEvent(new CustomEvent("poilian-locale-change", { detail: locale }));
 }
 
@@ -30,9 +36,11 @@ export function LanguageSelect({
   const currentLabel = locales.find((locale) => locale.value === current)?.label ?? "English";
 
   useEffect(() => {
-    if (value) return;
-    const saved = localStorage.getItem("poilian-locale") as Locale | null;
-    if (saved === "en" || saved === "fr" || saved === "ar") setStoredValue(saved);
+    const saved = value ?? getStoredLocale();
+    if (isLocale(saved)) {
+      if (!value) setStoredValue(saved);
+      applyDocumentLocale(saved);
+    }
   }, [value]);
 
   useEffect(() => {

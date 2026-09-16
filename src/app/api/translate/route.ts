@@ -4,7 +4,7 @@ const cache = new Map<string, string>();
 const supported = new Set(["fr", "ar"]);
 const chunkSize = 1200;
 const maxBatchSize = 20;
-const maxParallelRequests = 5;
+const maxParallelRequests = 2;
 
 function chunks(value: string) {
   const result: string[] = [];
@@ -30,14 +30,51 @@ async function translate(text: string, locale: string) {
   return result || text;
 }
 
-async function translateChunk(source: string, locale: string) {
+async function translateChunkGoogle(source: string, locale: string) {
   const endpoint = new URL("https://translate.googleapis.com/translate_a/single");
-  endpoint.searchParams.set("client", "gtx"); endpoint.searchParams.set("sl", "en"); endpoint.searchParams.set("tl", locale); endpoint.searchParams.set("dt", "t"); endpoint.searchParams.set("q", source);
-  const response = await fetch(endpoint, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8_000), cache: "no-store" });
-  if (!response.ok) throw new Error("Translation service unavailable");
-  const data = await response.json() as unknown;
-  const result = Array.isArray(data) && Array.isArray(data[0]) ? (data[0] as unknown[]).map((part) => Array.isArray(part) && typeof part[0] === "string" ? part[0] : "").join("") : "";
+  endpoint.searchParams.set("client", "gtx");
+  endpoint.searchParams.set("sl", "en");
+  endpoint.searchParams.set("tl", locale);
+  endpoint.searchParams.set("dt", "t");
+  endpoint.searchParams.set("q", source);
+  const response = await fetch(endpoint, {
+    headers: { Accept: "application/json", "User-Agent": "Poilian/1.0" },
+    signal: AbortSignal.timeout(8_000),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Google translate unavailable");
+  const data = (await response.json()) as unknown;
+  const result =
+    Array.isArray(data) && Array.isArray(data[0])
+      ? (data[0] as unknown[])
+          .map((part) => (Array.isArray(part) && typeof part[0] === "string" ? part[0] : ""))
+          .join("")
+      : "";
   return result || source;
+}
+
+async function translateChunkMyMemory(source: string, locale: string) {
+  const endpoint = new URL("https://api.mymemory.translated.net/get");
+  endpoint.searchParams.set("q", source.slice(0, 480));
+  endpoint.searchParams.set("langpair", `en|${locale}`);
+  const response = await fetch(endpoint, {
+    headers: { Accept: "application/json", "User-Agent": "Poilian/1.0" },
+    signal: AbortSignal.timeout(10_000),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("MyMemory unavailable");
+  const data = (await response.json()) as { responseData?: { translatedText?: string } };
+  const result = data.responseData?.translatedText?.trim();
+  if (!result || result.toUpperCase() === source.toUpperCase()) return source;
+  return result;
+}
+
+async function translateChunk(source: string, locale: string) {
+  try {
+    return await translateChunkGoogle(source, locale);
+  } catch {
+    return translateChunkMyMemory(source, locale);
+  }
 }
 
 async function translateBatch(texts: string[], locale: string) {

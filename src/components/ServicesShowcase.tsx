@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { type Locale } from "@/components/LanguageSelect";
+import { usePoilianLocale } from "@/hooks/usePoilianLocale";
 
 const copy: Record<
   Locale,
@@ -62,21 +62,7 @@ const copy: Record<
 };
 
 export function ServicesShowcase() {
-  const [locale, setLocale] = useState<Locale>("en");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("poilian-locale");
-    if (saved === "en" || saved === "fr" || saved === "ar") setLocale(saved);
-
-    const updateLocale = (event: Event) => {
-      const nextLocale = (event as CustomEvent<Locale>).detail;
-      if (nextLocale === "en" || nextLocale === "fr" || nextLocale === "ar") setLocale(nextLocale);
-    };
-
-    window.addEventListener("poilian-locale-change", updateLocale);
-    return () => window.removeEventListener("poilian-locale-change", updateLocale);
-  }, []);
-
+  const [locale] = usePoilianLocale();
   const text = copy[locale];
 
   return (

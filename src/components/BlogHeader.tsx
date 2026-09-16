@@ -3,15 +3,70 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { LanguageSelect, type Locale } from "@/components/LanguageSelect";
+import { LanguageSelect } from "@/components/LanguageSelect";
+import { usePoilianLocale } from "@/hooks/usePoilianLocale";
 import { SiteLogo } from "@/components/SiteLogo";
 import { AudioWaveform, simulatedLevels } from "@/components/AudioWaveform";
 import { togglePostAudio, POST_AUDIO_LEVELS, POST_AUDIO_STATE } from "@/components/PostListen";
 
 const copy = {
-  en: { links: ["Blog posts", "Companies", "Personal notes", "Photography", "About me"], search: "Search posts", submit: "Search", menu: "Open menu" },
-  fr: { links: ["Articles", "Entreprises", "Notes personnelles", "Photographie", "À propos"], search: "Rechercher des articles", submit: "Rechercher", menu: "Ouvrir le menu" },
-  ar: { links: ["المقالات", "الشركات", "ملاحظات شخصية", "التصوير", "من أنا"], search: "البحث في المقالات", submit: "بحث", menu: "فتح القائمة" },
+  en: {
+    links: ["Blog posts", "Companies", "Personal notes", "Photography", "About me"],
+    search: "Search posts",
+    submit: "Search",
+    menu: "Open menu",
+    home: "Home",
+    like: "Like",
+    listen: "Listen",
+    pause: "Pause",
+    thread: "Thread",
+    trending: "TRENDING",
+    trendingItems: [
+      ["AI & security", "/posts?query=AI"],
+      ["Digital culture", "/posts?query=culture"],
+      ["Research notes", "/research"],
+      ["Latest stories", "/posts"],
+      ["Projects", "/projects"],
+    ] as const,
+  },
+  fr: {
+    links: ["Articles", "Entreprises", "Notes personnelles", "Photographie", "À propos"],
+    search: "Rechercher des articles",
+    submit: "Rechercher",
+    menu: "Ouvrir le menu",
+    home: "Accueil",
+    like: "J’aime",
+    listen: "Écouter",
+    pause: "Pause",
+    thread: "Fil",
+    trending: "TENDANCES",
+    trendingItems: [
+      ["IA et sécurité", "/posts?query=AI"],
+      ["Culture numérique", "/posts?query=culture"],
+      ["Notes de recherche", "/research"],
+      ["Derniers articles", "/posts"],
+      ["Projets", "/projects"],
+    ] as const,
+  },
+  ar: {
+    links: ["المقالات", "الشركات", "ملاحظات شخصية", "التصوير", "من أنا"],
+    search: "البحث في المقالات",
+    submit: "بحث",
+    menu: "فتح القائمة",
+    home: "الرئيسية",
+    like: "إعجاب",
+    listen: "استماع",
+    pause: "إيقاف",
+    thread: "النقاش",
+    trending: "رائج",
+    trendingItems: [
+      ["الذكاء الاصطناعي والأمن", "/posts?query=AI"],
+      ["الثقافة الرقمية", "/posts?query=culture"],
+      ["ملاحظات بحثية", "/research"],
+      ["أحدث المقالات", "/posts"],
+      ["المشاريع", "/projects"],
+    ] as const,
+  },
 } as const;
 const paths = ["/posts", "/projects", "/notes", "/photography", "/about"];
 type NavigationPage = { slug: string; navigationLabel: string };
@@ -19,7 +74,7 @@ type NavigationPage = { slug: string; navigationLabel: string };
 export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { pages?: NavigationPage[]; category?: string; audioUrl?: string }) {
   const pathname = usePathname();
   const [pages, setPages] = useState<NavigationPage[]>(initialPages);
-  const [locale, setLocale] = useState<Locale>("en");
+  const [locale, setLocale] = usePoilianLocale();
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -32,15 +87,11 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
   const [audioLevels, setAudioLevels] = useState<number[]>(() => simulatedLevels(0, 16).map((value) => value * 0.3));
   const isPostView = pathname.startsWith("/posts/") && pathname !== "/posts";
 
-  useEffect(() => { 
-    const saved = localStorage.getItem("poilian-locale"); 
-    if (saved === "en" || saved === "fr" || saved === "ar") {
-      window.setTimeout(() => setLocale(saved), 0);
-    }
-    const update = () => setScrolled(window.scrollY > 38); 
-    update(); 
-    window.addEventListener("scroll", update, { passive: true }); 
-    return () => window.removeEventListener("scroll", update); 
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 38);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
   }, []);
 
   useEffect(() => {
@@ -154,18 +205,18 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 11v10H4.5A1.5 1.5 0 0 1 3 19.5v-6A1.5 1.5 0 0 1 4.5 12H7Zm0 0 3.2-6.4A2.2 2.2 0 0 1 12.2 3.5h.3A2.5 2.5 0 0 1 15 6v3.5h4.2a2.3 2.3 0 0 1 2.3 2.7l-1.1 7.2A2.5 2.5 0 0 1 17.9 22H7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
               </svg>
-              <span>Like</span>
+              <span>{text.like}</span>
             </button>
             <button type="button" className={`post-listen-action${listening ? " is-active is-playing" : ""}`} onClick={listenArticle} aria-pressed={listening}>
               <AudioWaveform compact playing={listening} levels={audioLevels} />
-              <span>{listening ? "Pause" : "Listen"}</span>
+              <span>{listening ? text.pause : text.listen}</span>
             </button>
             <button type="button" onClick={scrollToThread}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 6.5h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H10l-3.5 3v-3H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
                 <path d="M9 5h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1" fill="none" stroke="currentColor" strokeWidth="1.7" opacity=".7" />
               </svg>
-              <span>Thread</span>
+              <span>{text.thread}</span>
             </button>
           </nav>
         )}
@@ -236,7 +287,7 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
         className={`page-header-nav page-shell${menuOpen ? " is-menu-open" : ""}`} 
         aria-label="Main navigation"
       >
-        <Link className="nav-home-icon" href="/en" onClick={closeMenu} aria-label="Home">
+        <Link className="nav-home-icon" href="/en" onClick={closeMenu} aria-label={text.home}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9Z" /></svg>
         </Link>
         {text.links.map((label, index) => (
@@ -254,14 +305,12 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
       {pathname.startsWith("/posts/") && (
         <nav className="post-trending" aria-label="Trending topics">
           <div className="post-trending-inner page-shell">
-            <span className="trending-label">TRENDING</span>
-            {[
-              ["AI & security", "/posts?query=AI"],
-              ["Digital culture", "/posts?query=culture"],
-              ["Research notes", "/research"],
-              ["Latest stories", "/posts"],
-              ["Projects", "/projects"],
-            ].map(([label, href]) => <Link href={href} key={label}>{label}</Link>)}
+            <span className="trending-label">{text.trending}</span>
+            {text.trendingItems.map(([label, href]) => (
+              <Link href={href} key={href}>
+                {label}
+              </Link>
+            ))}
           </div>
         </nav>
       )}

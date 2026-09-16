@@ -1,13 +1,42 @@
 import { NextResponse } from "next/server";
-import { assertSameOrigin, headers, isAdminUser, parseConfigured, url } from "@/lib/admin";
+import {
+  assertSameOrigin,
+  ensureAdminFlag,
+  headers,
+  isAdminUser,
+  loadPrivilegedUser,
+  parseConfigured,
+  url,
+  type ParseUser,
+} from "@/lib/admin";
 import { clientKey, rateLimit } from "@/lib/rateLimit";
+
+async function parseLogin(identity: string, password: string) {
+  const response = await fetch(`${url}/login`, {
+    method: "POST",
+    headers,
+    cache: "no-store",
+    body: JSON.stringify({ username: identity, password }),
+  });
+  if (response.ok) return response;
+  // Some Parse setups store the login identity in email instead of username.
+  return fetch(`${url}/login`, {
+    method: "POST",
+    headers,
+    cache: "no-store",
+    body: JSON.stringify({ email: identity, password }),
+  });
+}
 
 export async function POST(request: Request) {
   if (!assertSameOrigin(request)) {
     return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
   if (!parseConfigured) {
-    return NextResponse.json({ error: "Parse is not configured. Add the Parse values to .env.local first." }, { status: 503 });
+    return NextResponse.json(
+      { error: "Parse is not configured. Add the Parse values to .env.local first." },
+      { status: 503 },
+    );
   }
 
   const limited = rateLimit(clientKey(request, "admin-login"), { limit: 8, windowMs: 15 * 60 * 1000 });
@@ -18,33 +47,39 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = (await request.json().catch(() => ({}))) as { username?: string; email?: string; password?: string };
+  const body = (await request.json().catch(() => ({}))) as {
+    username?: string;
+    email?: string;
+    password?: string;
+  };
   const identity = (body.email || body.username || "").trim().toLowerCase();
   const password = typeof body.password === "string" ? body.password : "";
   if (!identity || !password) {
     return NextResponse.json({ error: "Enter your email and password." }, { status: 400 });
   }
 
-  // Parse REST login must use POST body — never put passwords in the query string.
-  const response = await fetch(`${url}/login`, {
-    method: "POST",
-    headers,
-    cache: "no-store",
-    body: JSON.stringify({ username: identity, password }),
-  });
+  const response = await parseLogin(identity, password);
   if (!response.ok) {
     return NextResponse.json({ error: "Those login details were not accepted." }, { status: 401 });
   }
 
-  const user = (await response.json()) as {
-    sessionToken?: string;
-    isAdmin?: boolean;
-    email?: string;
-    username?: string;
-  };
-  if (!isAdminUser(user) || !user.sessionToken) {
-    return NextResponse.json({ error: "This account does not have administrator access." }, { status: 403 });
+  const user = (await response.json()) as ParseUser;
+  if (!user.sessionToken) {
+    return NextResponse.json({ error: "Those login details were not accepted." }, { status: 401 });
   }
+
+  const privileged = await loadPrivilegedUser(user, user.sessionToken);
+  if (!isAdminUser(privileged, identity)) {
+    return NextResponse.json(
+      {
+        error:
+          "This account does not have administrator access. In Parse Dashboard, set isAdmin to true on this _User, or set ADMIN_EMAIL in .env.local to this account’s email.",
+      },
+      { status: 403 },
+    );
+  }
+
+  await ensureAdminFlag(privileged);
 
   const result = NextResponse.json({ ok: true });
   result.cookies.set("poilian_admin_session", user.sessionToken, {

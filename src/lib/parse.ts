@@ -132,6 +132,28 @@ export async function getPost(slug: string) {
   return fallback.find((post) => post.slug === safe) ?? null;
 }
 
+export async function getPostBriefById(id: string): Promise<{ title: string; slug: string } | null> {
+  const safe = id.trim().slice(0, 80);
+  if (!safe || !configured) return null;
+  for (const className of ["Article", "BlogPost"] as const) {
+    try {
+      const response = await fetch(`${url}/classes/${className}/${encodeURIComponent(safe)}`, {
+        headers,
+        cache: "no-store",
+      });
+      if (!response.ok) continue;
+      const item = (await response.json()) as Record<string, unknown>;
+      return {
+        title: text(item.title) || "Untitled post",
+        slug: text(item.slug) || safe,
+      };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 export async function getAdminPosts(limit = 200): Promise<Post[]> {
   const capped = String(Math.min(Math.max(limit, 1), 500));
   const results = await Promise.all(

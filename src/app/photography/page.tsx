@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BlogHeader } from "@/components/BlogHeader";
-import { getAuthorProfile } from "@/lib/profile";
+import { readdir } from "fs/promises";
+import path from "path";
+import { PhotographyFooter, PhotographyHeader } from "@/components/PhotographyChrome";
 
 export const metadata: Metadata = {
   title: "Photography",
-  description: "Explore the Bitt-i.com photography collection — visual storytelling and moments from Algeria.",
+  description:
+    "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed.",
   alternates: { canonical: "/photography" },
   openGraph: {
     title: "Photography | Bitt-i.com",
-    description: "Explore the Bitt-i.com photography collection — visual storytelling and moments from Algeria.",
+    description:
+      "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed.",
     type: "website",
     url: "/photography",
     siteName: "Bitt-i.com",
@@ -18,152 +21,231 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Photography | Bitt-i.com",
-    description: "Explore the Bitt-i.com photography collection — visual storytelling and moments from Algeria.",
+    description:
+      "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed.",
     images: ["/Bitti.png"],
   },
 };
 
-const photographyItems = [
+const imageExt = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
+
+const captionFallback = [
   {
-    id: 1,
-    title: "Desert Landscape",
-    description: "Golden hour light across the Sahara dunes.",
-    image: "/heroright2.png",
-    category: "Landscape",
+    title: "Road light, long horizon",
+    body: "A frame from travel — quiet roads, open sky, and the pause between destinations.",
   },
   {
-    id: 2,
-    title: "Urban Architecture",
-    description: "Geometry and shadow in the modern city.",
-    image: "/heroright.png",
-    category: "Architecture",
+    title: "Ceremony and recognition",
+    body: "A career milestone captured in place: formal light, gathered people, and a moment that mattered.",
   },
   {
-    id: 3,
-    title: "Cultural Moments",
-    description: "People, tradition and everyday ritual.",
-    image: "/heroright2.png",
-    category: "Culture",
-  },
-  {
-    id: 4,
-    title: "Nature Details",
-    description: "Close studies of texture and form.",
-    image: "/heroright.png",
-    category: "Nature",
-  },
-  {
-    id: 5,
-    title: "Street Photography",
-    description: "Candid rhythm of daily life.",
-    image: "/heroright2.png",
-    category: "Street",
-  },
-  {
-    id: 6,
-    title: "Sunset Reflections",
-    description: "Color, water and the last light of day.",
-    image: "/heroright.png",
-    category: "Landscape",
+    title: "Work in the field",
+    body: "Across projects and trips, these stills keep a record of places, people, and progress.",
   },
 ];
 
+async function loadPhotographyImages() {
+  const dir = path.join(process.cwd(), "public", "PHOTOGRAPHY");
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && imageExt.has(path.extname(entry.name).toLowerCase()))
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      .map((name, index) => {
+        const caption = captionFallback[index % captionFallback.length];
+        return {
+          src: `/PHOTOGRAPHY/${encodeURIComponent(name)}`,
+          title: caption.title,
+          body: caption.body,
+          file: name,
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
+function CertificateIcon() {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="6" y="5" width="20" height="16" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 10h12M10 14h8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M13 21.5 16 24l3-2.5v4.2l-3 1.8-3-1.8v-4.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function AwardIcon() {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="12" r="6.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12.2 17.2 10 27l6-3.2L22 27l-2.2-9.8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M13.5 12h5M16 9.5v5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TimelineIcon() {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M8 7v18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="8" cy="10" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="8" cy="16" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="8" cy="22" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 10h12M12 16h9M12 22h11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default async function PhotographyPage() {
-  const profile = await getAuthorProfile();
-  const banners = [
-    {
-      href: "#gallery",
-      image: photographyItems[0].image,
-      label: "Browse the gallery",
-      title: "Frames from Algeria",
-      tone: "lead",
-    },
-    {
-      href: "/photographyapply",
-      image: profile.promotionImage || photographyItems[1].image,
-      label: "Book a session",
-      title: "Work with Bitt-i",
-      tone: "promo",
-    },
-    {
-      href: "/contact",
-      image: photographyItems[2].image,
-      label: "Start a brief",
-      title: "Editorial & brand stories",
-      tone: "story",
-    },
-  ] as const;
+  const images = await loadPhotographyImages();
 
   return (
-    <>
-      <BlogHeader />
-      <main className="photography-page">
-        <section className="photo-banner-stack" aria-label="Photography publicity">
-          {banners.map((banner) => (
-            <a
-              key={banner.href}
-              className={`photo-publicity-banner photo-publicity-${banner.tone}`}
-              href={banner.href}
-            >
-              <img src={banner.image} alt="" />
-              <div className="photo-publicity-copy">
-                {banner.tone === "lead" ? <h1>{banner.title}</h1> : <h2>{banner.title}</h2>}
-                <span>
-                  {banner.label} <b>↗</b>
-                </span>
-              </div>
-            </a>
-          ))}
-        </section>
-
-        <section className="photography-gallery" id="gallery">
-          <div className="personal-shell">
-            <header className="photo-gallery-head">
-              <h2>Selected work</h2>
-              <p>Landscapes, streets and quiet cultural details.</p>
-            </header>
-
-            <div className="gallery-grid">
-              {photographyItems.map((item) => (
-                <article key={item.id} className="gallery-item">
-                  <div className="gallery-image-wrapper">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      width={400}
-                      height={300}
-                      className="gallery-image"
-                      loading="lazy"
-                    />
-                    <div className="gallery-overlay">
-                      <span className="gallery-category">{item.category}</span>
-                    </div>
-                  </div>
-                  <div className="gallery-content">
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                  </div>
-                </article>
-              ))}
+    <div className="standalone-page photo-journey">
+      <PhotographyHeader />
+      <main>
+        <header className="photo-journey-hero">
+          <div className="photo-chrome-shell photo-journey-hero-grid">
+            <h1>
+              Photography across
+              <br />
+              trips &amp; career.
+            </h1>
+            <div className="photo-journey-hero-points">
+              <article>
+                <h2>Trips &amp; places</h2>
+                <p>
+                  A visual record of roads, cities and quiet horizons — frames kept in black and white so light and
+                  form stay in focus across every journey.
+                </p>
+              </article>
+              <article>
+                <h2>Career moments</h2>
+                <p>
+                  Ceremonies, projects and recognition along the way: rooms where work happened, people who gathered,
+                  and milestones that marked progress in study and innovation.
+                </p>
+              </article>
             </div>
           </div>
+        </header>
+
+        <section className="photo-journey-gallery" id="gallery" aria-labelledby="gallery-title">
+          <div className="photo-journey-section-head">
+            <h2 id="gallery-title">Trips &amp; career frames</h2>
+            <p>Selected stills from travel and professional life, presented in monochrome.</p>
+          </div>
+          {images.length > 0 ? (
+            <ul className="photo-journey-grid">
+              {images.map((image, index) => (
+                <li key={image.file}>
+                  <figure>
+                    <div className="photo-journey-frame">
+                      <img src={image.src} alt={image.title} loading={index < 2 ? "eager" : "lazy"} />
+                    </div>
+                    <figcaption>
+                      <span className="photo-journey-index">{String(index + 1).padStart(2, "0")}</span>
+                      <div>
+                        <strong>{image.title}</strong>
+                        <p>{image.body}</p>
+                      </div>
+                    </figcaption>
+                  </figure>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="photo-journey-empty">No images found in the photography archive yet.</p>
+          )}
         </section>
 
-        <section className="photo-cta-banner">
-          <div className="personal-shell">
-            <h2>Need photography for a project?</h2>
-            <p>Portraits, events and editorial assignments — tell me what you need.</p>
-            <div className="photo-cta-actions">
-              <Link href="/photographyapply" className="hero-post-link">
-                Apply for a shoot <span>↗</span>
-              </Link>
-              <Link href="/contact" className="hero-post-link">
-                Contact <span>↗</span>
-              </Link>
-            </div>
+        <section className="photo-journey-milestone" id="milestone" aria-labelledby="milestone-title">
+          <div className="photo-journey-section-head">
+            <h2 id="milestone-title">Milestone &amp; Achievement</h2>
+            <p>
+              Recognition Award for Academic and Innovation Achievement — an important step in an academic and
+              professional journey committed to innovation, technology, entrepreneurship and continuous development.
+            </p>
+          </div>
+
+          <div className="photo-journey-prose">
+            <p>
+              A significant milestone marking recognition for outstanding participation and achievement in an academic
+              and innovation-focused event. I was honored with an official certificate of recognition and an award
+              during a formal ceremony, celebrating contribution, dedication, and involvement in developing and
+              presenting innovative work.
+            </p>
+            <p>
+              The achievement represents an important step in my academic and professional journey, reflecting a
+              commitment to innovation, technology, entrepreneurship, and continuous development.
+            </p>
+          </div>
+
+          <ol className="photo-journey-rows">
+            <li>
+              <span className="photo-journey-badge" aria-hidden="true">
+                1
+              </span>
+              <div className="photo-journey-row-copy">
+                <strong>Achievement Label: Awarded &amp; Recognized for Innovation Achievement</strong>
+                <p>
+                  Official certificate and award for outstanding participation and contribution to an academic
+                  innovation event.
+                </p>
+              </div>
+              <span className="photo-journey-row-icon" aria-hidden="true">
+                <CertificateIcon />
+              </span>
+            </li>
+            <li>
+              <span className="photo-journey-badge" aria-hidden="true">
+                2
+              </span>
+              <div className="photo-journey-row-copy">
+                <strong>Innovation Achievement Award</strong>
+                <p>
+                  Recognized with an official certificate and award for outstanding participation and contribution to
+                  an academic innovation event.
+                </p>
+              </div>
+              <span className="photo-journey-row-icon" aria-hidden="true">
+                <AwardIcon />
+              </span>
+            </li>
+            <li>
+              <span className="photo-journey-badge" aria-hidden="true">
+                3
+              </span>
+              <div className="photo-journey-row-copy">
+                <strong>Short version for a profile / timeline</strong>
+                <p>
+                  Innovation Achievement Award — Recognized with an official certificate and award for outstanding
+                  participation and contribution to an academic innovation event.
+                </p>
+              </div>
+              <span className="photo-journey-row-icon" aria-hidden="true">
+                <TimelineIcon />
+              </span>
+            </li>
+          </ol>
+        </section>
+
+        <section className="photo-journey-cta">
+          <p>Looking for a collaboration, portrait session, or editorial frame?</p>
+          <div className="photo-journey-cta-actions">
+            <Link href="/photographyapply">Book a shoot</Link>
+            <Link href="/contact">Contact</Link>
           </div>
         </section>
       </main>
-    </>
+      <PhotographyFooter />
+    </div>
   );
 }

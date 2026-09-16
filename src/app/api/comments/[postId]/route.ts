@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { clientKey, rateLimit } from "@/lib/rateLimit";
-import { submitToParse } from "@/lib/parse";
+import { notifyNewComment } from "@/lib/email/notifications";
+import { getPostBriefById, submitToParse } from "@/lib/parse";
 
 export async function POST(request: Request, { params }: { params: Promise<{ postId: string }> }) {
   const limited = rateLimit(clientKey(request, "comment-post"), { limit: 20, windowMs: 10 * 60 * 1000 });
@@ -34,6 +35,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
     likeCount: 0,
   });
   if (!saved) return NextResponse.json({ error: "Comment service is unavailable." }, { status: 503 });
+
+  void getPostBriefById(safePostId).then((post) => {
+    const title = post?.title || "A post";
+    const slug = post?.slug || safePostId;
+    return notifyNewComment({
+      author: author || "Guest",
+      content,
+      postTitle: title,
+      postSlug: slug,
+    });
+  }).catch((error) => console.error("[notify:comment]", error));
+
   return NextResponse.json(
     {
       id: saved.objectId || crypto.randomUUID(),

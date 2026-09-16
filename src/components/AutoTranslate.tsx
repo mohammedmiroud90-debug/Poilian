@@ -2,12 +2,11 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import type { Locale } from "@/components/LanguageSelect";
+import { getStoredLocale, isLocale, type Locale } from "@/lib/locale";
 
-const excluded = "script,style,pre,code,svg,.language-select,.rich-editor,.toolbar,.poilian-locale-copy,.poilian-admin";
-const translatableArea = "main, .personal-footer";
-
-function isLocale(value: string | null): value is Locale { return value === "en" || value === "fr" || value === "ar"; }
+const excluded =
+  "script,style,pre,code,svg,.language-select,.rich-editor,.toolbar,.poilian-locale-copy,.poilian-admin,[data-no-translate]";
+const translatableArea = "main, .personal-footer, header.page-header";
 function splitWhitespace(value: string) { return { leading: value.match(/^\s*/)?.[0] ?? "", text: value.trim(), trailing: value.match(/\s*$/)?.[0] ?? "" }; }
 
 export function AutoTranslate() {
@@ -33,14 +32,14 @@ export function AutoTranslate() {
 
     async function applyLocale(requestedLocale?: Locale) {
       const currentRequest = ++requestId;
-      const stored = requestedLocale || localStorage.getItem("poilian-locale");
+      const stored = requestedLocale || getStoredLocale();
       const locale: Locale = isLocale(stored) ? stored : "en";
       document.documentElement.lang = locale;
       document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
 
       const items = collect().map((node) => {
         const source = sources.get(node) ?? node.nodeValue ?? "";
-        sources.set(node, source);
+        if (!sources.has(node)) sources.set(node, source);
         node.nodeValue = source;
         return { node, source };
       }).filter(({ source }) => splitWhitespace(source).text);
@@ -60,7 +59,10 @@ export function AutoTranslate() {
             const { leading, trailing } = splitWhitespace(item.source);
             item.node.nodeValue = `${leading}${translation}${trailing}`;
           });
-        } catch { /* Preserve the original content when translation is unavailable. */ }
+        } catch {
+          /* Preserve the original content when translation is unavailable. */
+        }
+        if (cancelled || currentRequest !== requestId) return;
       }
     }
 
