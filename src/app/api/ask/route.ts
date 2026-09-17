@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   if (textField(body.website, 200)) return NextResponse.json({ ok: true });
   const name = textField(body.name, 80);
-  const email = textField(body.email, 254);
+  const email = textField(body.email, 254).toLowerCase();
   const title = textField(body.title, 150);
   const topic = normalizeAskTopic(body.topic);
   const html = sanitizeContactHtml(typeof body.question === "string" ? body.question : "");

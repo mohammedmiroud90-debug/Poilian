@@ -3,6 +3,7 @@ import Link from "next/link";
 import { readdir } from "fs/promises";
 import path from "path";
 import { PhotographyFooter, PhotographyHeader } from "@/components/PhotographyChrome";
+import { PhotographyFrames, type FrameImage } from "@/components/PhotographyFrames";
 
 export const metadata: Metadata = {
   title: "Photography",
@@ -29,22 +30,62 @@ export const metadata: Metadata = {
 
 const imageExt = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
 
-const captionFallback = [
+/** Rich captions keyed by filename when known; otherwise cycle by index. */
+const frameMeta: Record<string, Omit<FrameImage, "src" | "file">> = {
+  "1000045960.jpg": {
+    category: "travel",
+    title: "Road light, long horizon",
+    body: "A travel still from the road — quiet asphalt, open sky, and the pause between destinations. Monochrome keeps the distance and the light in the foreground.",
+    points: [
+      "Captured in transit between places",
+      "Emphasis on horizon and road geometry",
+      "Part of the personal travel archive",
+    ],
+  },
+  "1000045961.jpg": {
+    category: "recognition",
+    title: "Ceremony and recognition",
+    body: "A career milestone in formal light: people gathered, a shared stage, and the moment achievement was acknowledged with certificate and award.",
+    points: [
+      "Academic and innovation recognition event",
+      "Official certificate and award ceremony",
+      "A marker on the professional timeline",
+    ],
+  },
+  "1000045962.jpg": {
+    category: "career",
+    title: "Work in the field",
+    body: "Professional life beyond the desk — a frame from projects and gatherings where ideas, people and place meet. Kept in black and white to stress gesture and setting.",
+    points: [
+      "Field and project context",
+      "People and process in one frame",
+      "Documentation of practice over time",
+    ],
+  },
+};
+
+const fallbackMeta: Omit<FrameImage, "src" | "file">[] = [
   {
+    category: "travel",
     title: "Road light, long horizon",
     body: "A frame from travel — quiet roads, open sky, and the pause between destinations.",
+    points: ["Travel archive", "Monochrome landscape", "Journey documentation"],
   },
   {
+    category: "recognition",
     title: "Ceremony and recognition",
     body: "A career milestone captured in place: formal light, gathered people, and a moment that mattered.",
+    points: ["Recognition event", "Certificate ceremony", "Professional milestone"],
   },
   {
+    category: "career",
     title: "Work in the field",
     body: "Across projects and trips, these stills keep a record of places, people, and progress.",
+    points: ["Professional practice", "Project contexts", "Visual career record"],
   },
 ];
 
-async function loadPhotographyImages() {
+async function loadPhotographyImages(): Promise<FrameImage[]> {
   const dir = path.join(process.cwd(), "public", "PHOTOGRAPHY");
   try {
     const entries = await readdir(dir, { withFileTypes: true });
@@ -53,12 +94,11 @@ async function loadPhotographyImages() {
       .map((entry) => entry.name)
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
       .map((name, index) => {
-        const caption = captionFallback[index % captionFallback.length];
+        const meta = frameMeta[name] || fallbackMeta[index % fallbackMeta.length];
         return {
           src: `/PHOTOGRAPHY/${encodeURIComponent(name)}`,
-          title: caption.title,
-          body: caption.body,
           file: name,
+          ...meta,
         };
       });
   } catch {
@@ -137,34 +177,7 @@ export default async function PhotographyPage() {
           </div>
         </header>
 
-        <section className="photo-journey-gallery" id="gallery" aria-labelledby="gallery-title">
-          <div className="photo-journey-section-head">
-            <h2 id="gallery-title">Trips &amp; career frames</h2>
-            <p>Selected stills from travel and professional life, presented in monochrome.</p>
-          </div>
-          {images.length > 0 ? (
-            <ul className="photo-journey-grid">
-              {images.map((image, index) => (
-                <li key={image.file}>
-                  <figure>
-                    <div className="photo-journey-frame">
-                      <img src={image.src} alt={image.title} loading={index < 2 ? "eager" : "lazy"} />
-                    </div>
-                    <figcaption>
-                      <span className="photo-journey-index">{String(index + 1).padStart(2, "0")}</span>
-                      <div>
-                        <strong>{image.title}</strong>
-                        <p>{image.body}</p>
-                      </div>
-                    </figcaption>
-                  </figure>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="photo-journey-empty">No images found in the photography archive yet.</p>
-          )}
-        </section>
+        <PhotographyFrames images={images} />
 
         <section className="photo-journey-milestone" id="milestone" aria-labelledby="milestone-title">
           <div className="photo-journey-section-head">

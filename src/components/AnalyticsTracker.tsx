@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 export function AnalyticsTracker() {
   const pathname = usePathname();
   useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
+    if (pathname.startsWith("/admin") || pathname.startsWith("/space")) return;
     if (typeof window !== "undefined" && window.localStorage.getItem("poilian-personal-cookie-consent") === "necessary") {
       return;
     }

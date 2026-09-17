@@ -90,12 +90,36 @@ function IconInstagram() {
   );
 }
 
+const utilityCopy = {
+  en: { support: "Support", faq: "FAQ", login: "Login", search: "Search" },
+  fr: { support: "Support", faq: "FAQ", login: "Connexion", search: "Rechercher" },
+  ar: { support: "الدعم", faq: "الأسئلة", login: "دخول", search: "بحث" },
+} as const;
+
+function ChevronDown() {
+  return (
+    <svg className="photo-df-chevron" viewBox="0 0 12 12" aria-hidden="true">
+      <path d="M2.4 4.2 6 8l3.6-3.8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg className="photo-df-user" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="9" r="3.2" fill="currentColor" />
+      <path d="M5.5 19.2a6.5 6.5 0 0 1 13 0" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function PhotographyHeader() {
   const [locale, setLocale] = usePoilianLocale();
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const links = nav[locale];
   const search = searchCopy[locale];
+  const utility = utilityCopy[locale];
 
   function onSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,65 +128,89 @@ export function PhotographyHeader() {
   }
 
   return (
-    <header className="photo-chrome-header poilian-locale-copy" dir={locale === "ar" ? "rtl" : "ltr"}>
-      <div className="photo-chrome-shell photo-chrome-header-inner">
-        <div className="photo-chrome-brand">
-          <Link className="photo-chrome-logo" href="/en" aria-label="Poilian home">
+    <header className="photo-df-header poilian-locale-copy" dir={locale === "ar" ? "rtl" : "ltr"}>
+      <div className="photo-df-utility">
+        <div className="photo-chrome-shell photo-df-utility-inner">
+          <nav className="photo-df-utility-left" aria-label="Support">
+            <Link href="/contact">
+              <ChevronDown />
+              {utility.support}
+            </Link>
+            <Link href="/ask-me">{utility.faq}</Link>
+          </nav>
+          <div className="photo-df-utility-right">
+            <LanguageSelect value={locale} onLocaleChange={setLocale} />
+            <Link className="photo-df-login" href="/admin">
+              <ChevronDown />
+              {utility.login}
+              <UserIcon />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="photo-df-main">
+        <div className="photo-chrome-shell photo-df-main-inner">
+          <Link className="photo-df-logo" href="/en" aria-label="Poilian home">
             <SiteLogo alt="Poilian" width={148} height={40} priority />
           </Link>
-          <nav className="photo-chrome-nav" aria-label="Photography navigation">
+
+          <nav className="photo-df-nav" aria-label="Main navigation">
             {links.map((item) => (
               <Link key={item.href} href={item.href} className={item.href === "/photography" ? "is-active" : ""}>
                 {item.label}
               </Link>
             ))}
           </nav>
-        </div>
-        <div className="photo-chrome-tools">
-          <button
-            type="button"
-            className={`photo-chrome-search-toggle${searchOpen ? " is-open" : ""}`}
-            aria-expanded={searchOpen}
-            aria-controls="photo-chrome-search"
-            aria-label={search.search}
-            onClick={() => setSearchOpen((open) => !open)}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="10.8" cy="10.8" r="5.8" fill="none" stroke="currentColor" strokeWidth="1.8" />
-              <path d="m15.2 15.2 4.2 4.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
-          <a
-            className="photo-chrome-linkedin"
-            href="https://www.linkedin.com"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="LinkedIn"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="currentColor"
-                d="M6.2 8.4A2.2 2.2 0 1 0 6.2 4a2.2 2.2 0 0 0 0 4.4ZM4.3 20h3.8V10H4.3v10ZM10.5 10v10h3.8v-5c0-1.3.2-2.6 1.9-2.6 1.7 0 1.7 1.6 1.7 2.7V20h3.8v-5.6c0-3.5-.8-6.1-4.9-6.1-2 0-3.3 1.1-3.8 2.1h-.1V10h-3.4Z"
-              />
-            </svg>
-          </a>
-          <LanguageSelect value={locale} onLocaleChange={setLocale} />
+
+          <div className="photo-df-actions">
+            <a
+              className="photo-df-linkedin"
+              href="https://www.linkedin.com"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="LinkedIn"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M6.2 8.4A2.2 2.2 0 1 0 6.2 4a2.2 2.2 0 0 0 0 4.4ZM4.3 20h3.8V10H4.3v10ZM10.5 10v10h3.8v-5c0-1.3.2-2.6 1.9-2.6 1.7 0 1.7 1.6 1.7 2.7V20h3.8v-5.6c0-3.5-.8-6.1-4.9-6.1-2 0-3.3 1.1-3.8 2.1h-.1V10h-3.4Z"
+                />
+              </svg>
+            </a>
+            <button
+              type="button"
+              className={`photo-df-search-btn${searchOpen ? " is-open" : ""}`}
+              aria-expanded={searchOpen}
+              aria-controls="photo-chrome-search"
+              onClick={() => setSearchOpen((open) => !open)}
+            >
+              <span>{utility.search}</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="10.8" cy="10.8" r="5.8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                <path d="m15.2 15.2 4.2 4.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
+
       {searchOpen && (
-        <form id="photo-chrome-search" className="photo-chrome-shell photo-chrome-search" onSubmit={onSearch} role="search">
-          <label className="sr-only" htmlFor="photo-search-input">
-            {search.search}
-          </label>
-          <input
-            id="photo-search-input"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={search.placeholder}
-            autoFocus
-            maxLength={120}
-          />
-          <button type="submit">{search.submit}</button>
+        <form id="photo-chrome-search" className="photo-df-search-bar" onSubmit={onSearch} role="search">
+          <div className="photo-chrome-shell photo-df-search-inner">
+            <label className="sr-only" htmlFor="photo-search-input">
+              {search.search}
+            </label>
+            <input
+              id="photo-search-input"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={search.placeholder}
+              autoFocus
+              maxLength={120}
+            />
+            <button type="submit">{search.submit}</button>
+          </div>
         </form>
       )}
     </header>

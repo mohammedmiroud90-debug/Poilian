@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   if (textField(body.website, 200)) return NextResponse.json({ ok: true });
 
   const name = textField(body.name, 100);
-  const email = textField(body.email, 254);
+  const email = textField(body.email, 254).toLowerCase();
   const company = textField(body.company, 120);
   const phone = textField(body.phone, 40);
   const subject = textField(body.subject, 160);

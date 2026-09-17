@@ -27,7 +27,10 @@ export function PostTools({ title }: { title: string }) {
 
     const update = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setProgress(readProgress()));
+      frame = requestAnimationFrame(() => {
+        const next = readProgress();
+        setProgress((current) => (Math.abs(current - next) < 0.25 ? current : next));
+      });
     };
 
     update();

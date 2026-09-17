@@ -88,6 +88,7 @@ export async function notifyAskSubmission(payload: {
 
 export async function notifyNewComment(payload: {
   author: string;
+  email?: string;
   content: string;
   postTitle: string;
   postSlug: string;
@@ -100,6 +101,7 @@ export async function notifyNewComment(payload: {
     rows: [
       { label: "Post", value: payload.postTitle },
       { label: "Author", value: payload.author },
+      ...(payload.email ? [{ label: "Email", value: payload.email }] : []),
       { label: "Comment", value: payload.content },
     ],
     ctaLabel: "Moderate comments",

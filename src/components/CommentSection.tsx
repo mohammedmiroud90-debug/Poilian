@@ -16,6 +16,7 @@ type Comment = {
 };
 
 const visitorKey = "poilian-comment-visitor";
+const guestProfileKey = "poilian-comment-guest";
 const likesKey = "poilian-comment-likes";
 
 function formatCommentDate(value: string) {
@@ -41,6 +42,26 @@ function getVisitorId() {
     return next;
   } catch {
     return `guest${Date.now().toString(36)}`;
+  }
+}
+
+function readGuestProfile() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(guestProfileKey) ?? "{}") as { name?: string; email?: string };
+    return {
+      name: typeof raw.name === "string" ? raw.name : "",
+      email: typeof raw.email === "string" ? raw.email : "",
+    };
+  } catch {
+    return { name: "", email: "" };
+  }
+}
+
+function writeGuestProfile(name: string, email: string) {
+  try {
+    localStorage.setItem(guestProfileKey, JSON.stringify({ name, email }));
+  } catch {
+    /* Ignore quota errors. */
   }
 }
 
@@ -82,6 +103,8 @@ export function CommentSection({ postId, initialComments }: { postId: string; in
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [liking, setLiking] = useState<string>("");
   const [status, setStatus] = useState("");
+  const [author, setAuthor] = useState("");
+  const [email, setEmail] = useState("");
   const [content, setContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -89,6 +112,9 @@ export function CommentSection({ postId, initialComments }: { postId: string; in
 
   useEffect(() => {
     setLiked(readLocalLikes());
+    const profile = readGuestProfile();
+    if (profile.name) setAuthor(profile.name);
+    if (profile.email) setEmail(profile.email);
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]") as Comment[];
       if (saved.length) {
@@ -126,29 +152,45 @@ export function CommentSection({ postId, initialComments }: { postId: string; in
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const name = author.replace(/\s+/g, " ").trim();
+    const mail = email.replace(/\s+/g, " ").trim().toLowerCase();
+    if (!name || name.length < 2) {
+      setStatus("Enter your name (at least 2 characters).");
+      return;
+    }
+    if (!mail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      setStatus("Enter a valid email address.");
+      return;
+    }
     if (!content.trim() || submitting) return;
     setSubmitting(true);
     setStatus("Publishing your response…");
+    writeGuestProfile(name, mail);
     const parentId = replyingTo?.id;
     const response = await fetch(`/api/comments/${postId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ author: "Guest", content, parentId }),
+      body: JSON.stringify({ author: name, email: mail, content, parentId }),
     });
     if (response.ok) save(await response.json(), false);
     else {
-      save(
-        {
-          id: crypto.randomUUID(),
-          author: "Guest",
-          content,
-          parentId,
-          createdAt: new Date().toISOString(),
-          avatarUrl: fallbackAvatar,
-          likeCount: 0,
-        },
-        true,
-      );
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (response.status === 400 || response.status === 429) {
+        setStatus(result.error || "Unable to publish this comment.");
+      } else {
+        save(
+          {
+            id: crypto.randomUUID(),
+            author: name,
+            content,
+            parentId,
+            createdAt: new Date().toISOString(),
+            avatarUrl: fallbackAvatar,
+            likeCount: 0,
+          },
+          true,
+        );
+      }
     }
     setSubmitting(false);
   }
@@ -216,6 +258,8 @@ export function CommentSection({ postId, initialComments }: { postId: string; in
 
   const roots = comments.filter((comment) => !comment.parentId);
   const replies = (id: string) => comments.filter((comment) => comment.parentId === id);
+  const canPublish =
+    author.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && Boolean(content.trim());
 
   const renderComment = (comment: Comment, reply = false) => {
     const isLiked = Boolean(liked[comment.id]);
@@ -264,13 +308,41 @@ export function CommentSection({ postId, initialComments }: { postId: string; in
       {roots.map((comment) => renderComment(comment))}
       <form onSubmit={submit} className="response-composer">
         <div className="response-prompt">
-          <CommentAvatar seed="guest-composer" />
+          <CommentAvatar seed={author.trim() || "guest-composer"} />
           <label htmlFor="response">{replyingTo ? `Replying to ${replyingTo.author}` : "Write a response"}</label>
           {replyingTo && (
             <button className="cancel-reply" type="button" onClick={() => setReplyingTo(null)}>
               Cancel
             </button>
           )}
+        </div>
+        <div className="guest-comment-fields">
+          <label>
+            Username
+            <input
+              name="author"
+              value={author}
+              onChange={(event) => setAuthor(event.target.value)}
+              placeholder="Your name"
+              autoComplete="nickname"
+              required
+              minLength={2}
+              maxLength={80}
+            />
+          </label>
+          <label>
+            Email
+            <input
+              name="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
+              maxLength={254}
+            />
+          </label>
         </div>
         <textarea
           id="response"
@@ -281,8 +353,8 @@ export function CommentSection({ postId, initialComments }: { postId: string; in
           maxLength={6000}
         />
         <div className="response-actions">
-          <small>{status}</small>
-          <button disabled={!content.trim() || submitting}>
+          <small>{status || "Guests must provide a username and email to comment."}</small>
+          <button disabled={!canPublish || submitting}>
             {submitting ? "Publishing…" : replyingTo ? "Reply" : "Publish"}
           </button>
         </div>

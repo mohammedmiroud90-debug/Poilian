@@ -1,27 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 export function PageLoader() {
   const [loading, setLoading] = useState(false);
   const pathname = usePathname();
+  const isFirstPath = useRef(true);
 
   useEffect(() => {
-    // Defer the state transition so route changes get one paint with the loader.
-    const showTimer = setTimeout(() => setLoading(true), 0);
-    const hideTimer = setTimeout(() => setLoading(false), 800);
+    // Initial paint already has content — don't flash a route loader.
+    if (isFirstPath.current) {
+      isFirstPath.current = false;
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    // Only show if the transition lasts longer than a short delay.
+    const showTimer = window.setTimeout(() => {
+      if (!cancelled) setLoading(true);
+    }, 140);
+    const hideTimer = window.setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 720);
 
     return () => {
-      clearTimeout(showTimer);
-      clearTimeout(hideTimer);
+      cancelled = true;
+      window.clearTimeout(showTimer);
+      window.clearTimeout(hideTimer);
+      // Always clear — otherwise HMR / quick remounts leave the overlay stuck.
+      setLoading(false);
     };
   }, [pathname]);
 
   if (!loading) return null;
 
   return (
-    <div className="poilian-page-loader" role="status" aria-label="Loading">
+    <div className="poilian-page-loader" role="status" aria-label="Loading" aria-live="polite">
       <div className="loader-content">
         <div className="loader-icon" aria-hidden="true">
           <svg className="loader-mark" viewBox="0 0 64 54" fill="none" xmlns="http://www.w3.org/2000/svg">

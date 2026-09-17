@@ -332,10 +332,10 @@ export default async function PostPage({
         <section className="post-reading-layout">
           {article}
           <div className="post-reading-sidebar">
-            <ContributeCard />
             <aside className="post-toc-sidebar">
               <ArticleToc headings={headings.length > 0 ? headings.map(({ id, value, level }) => ({ id: id!, value, level })) : []} />
             </aside>
+            <ContributeCard />
             <aside className="post-promotion-sidebar" aria-label="Work with Poilian">
               <a className="toc-promotion" href="/contact">
                 <img src={authorProfile.promotionImage} alt="Work with Poilian" />
