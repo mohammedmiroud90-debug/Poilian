@@ -28,6 +28,8 @@ const getHtmlContent = (value: unknown) => typeof value === "string" ? value.tri
 
 export function sanitizeHtml(html: string) {
   return html
+    .replace(/\scontenteditable\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\sdata-placeholder\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/<(script|style|object|embed|form|base|meta|link|svg|math)[^>]*>[\s\S]*?<\/\1>/gi, "")
     .replace(/<\/?(?:script|style|object|embed|form|base|meta|link|svg|math)[^>]*>/gi, "")
     .replace(/<iframe\b([^>]*)>[\s\S]*?<\/iframe>/gi, (_match, attrs: string) => {

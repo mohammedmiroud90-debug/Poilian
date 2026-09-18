@@ -9,9 +9,53 @@ import {
   useState,
   forwardRef,
 } from "react";
+import { createPortal } from "react-dom";
 import { EditorIcons } from "@/components/EditorIcons";
-import { imageEmbedHtml, pdfEmbedHtml, toVideoEmbedUrl, videoEmbedHtml } from "@/lib/embed";
+import { EditorUrlDialog } from "@/components/EditorUrlDialog";
+import { imageEmbedHtml, imageTitleFromFileName, pdfEmbedHtml, toVideoEmbedUrl, videoEmbedHtml } from "@/lib/embed";
 import { uploadEditorFile, uploadEditorImage } from "@/lib/upload";
+
+type UrlDialogKind = "link" | "video" | "image" | "pdf" | null;
+
+const CAPTION_PLACEHOLDER = "Add a short caption…";
+const FLOAT_BAR_HALF_WIDTH = 170;
+
+function ensureImageFigure(img: HTMLImageElement): HTMLElement {
+  const parent = img.parentElement;
+  if (parent?.tagName.toLowerCase() === "figure") {
+    parent.classList.add("editor-figure");
+    let caption = parent.querySelector("figcaption");
+    if (!caption) {
+      caption = document.createElement("figcaption");
+      caption.setAttribute("contenteditable", "true");
+      caption.dataset.placeholder = CAPTION_PLACEHOLDER;
+      parent.appendChild(caption);
+    } else {
+      caption.setAttribute("contenteditable", "true");
+      if (!caption.dataset.placeholder) caption.dataset.placeholder = CAPTION_PLACEHOLDER;
+    }
+    return parent;
+  }
+  const figure = document.createElement("figure");
+  figure.className = "editor-figure";
+  parent?.insertBefore(figure, img);
+  figure.appendChild(img);
+  const caption = document.createElement("figcaption");
+  caption.setAttribute("contenteditable", "true");
+  caption.dataset.placeholder = CAPTION_PLACEHOLDER;
+  figure.appendChild(caption);
+  return figure;
+}
+
+function readImageMeta(img: HTMLImageElement) {
+  const figure = img.closest("figure");
+  const caption = figure?.querySelector("figcaption")?.textContent?.trim() || "";
+  const title = (img.getAttribute("alt") || img.getAttribute("title") || "").trim();
+  return {
+    title,
+    caption: caption === CAPTION_PLACEHOLDER ? "" : caption,
+  };
+}
 
 export type RichTextEditorHandle = {
   getHtml: () => string;
@@ -84,17 +128,39 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
   const [notice, setNotice] = useState("");
   const [uploading, setUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
+  const [imageTitle, setImageTitle] = useState("");
+  const [imageCaption, setImageCaption] = useState("");
   const [mode, setMode] = useState<"rich" | "markdown">("rich");
   const [insertOpen, setInsertOpen] = useState(false);
-  const [floatBar, setFloatBar] = useState<{ show: boolean; x: number; y: number }>({
+  const [urlDialog, setUrlDialog] = useState<UrlDialogKind>(null);
+  const [floatBar, setFloatBar] = useState<{ show: boolean; x: number; y: number; below: boolean }>({
     show: false,
     x: 0,
     y: 0,
+    below: false,
   });
+  const floatBarVisible = useRef(false);
+  const selectionRaf = useRef<number | null>(null);
+  const pointerPos = useRef<{ x: number; y: number } | null>(null);
   const isMedium = variant === "medium";
 
   useImperativeHandle(ref, () => ({
-    getHtml: () => editor.current?.innerHTML || "",
+    getHtml: () => {
+      const root = editor.current;
+      if (!root) return "";
+      const clone = root.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("[contenteditable]").forEach((node) => node.removeAttribute("contenteditable"));
+      clone.querySelectorAll("figcaption").forEach((caption) => {
+        const text = caption.textContent?.trim() || "";
+        if (!text || text === CAPTION_PLACEHOLDER) {
+          caption.textContent = "";
+          caption.removeAttribute("data-placeholder");
+        } else {
+          caption.removeAttribute("data-placeholder");
+        }
+      });
+      return clone.innerHTML;
+    },
     setHtml: (html: string) => {
       if (editor.current) editor.current.innerHTML = html || "<p></p>";
       sync();
@@ -111,15 +177,37 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
   }, []);
 
   useEffect(() => {
-    function onScrollOrResize() {
-      if (floatBar.show) updateFloatingToolbar();
+    function scheduleFloatingToolbar() {
+      if (selectionRaf.current != null) cancelAnimationFrame(selectionRaf.current);
+      selectionRaf.current = requestAnimationFrame(() => {
+        selectionRaf.current = null;
+        updateFloatingToolbar();
+      });
     }
+
+    function onScrollOrResize() {
+      if (floatBarVisible.current) scheduleFloatingToolbar();
+    }
+
+    function onPointerMove(event: PointerEvent) {
+      if (event.buttons === 0) return;
+      const root = editor.current;
+      if (!root) return;
+      const target = event.target;
+      if (!(target instanceof Node) || !root.contains(target)) return;
+      pointerPos.current = { x: event.clientX, y: event.clientY };
+      scheduleFloatingToolbar();
+    }
+
     function onDocMouseDown(event: MouseEvent) {
       const target = event.target as Node | null;
       if (
         target &&
         (editor.current?.contains(target) ||
-          (target instanceof Element && target.closest(".selection-float-toolbar")) ||
+          (target instanceof Element &&
+            (target.closest(".selection-float-toolbar") ||
+              target.closest(".image-settings") ||
+              target.closest(".editor-url-overlay"))) ||
           insertRef.current?.contains(target as Node))
       ) {
         return;
@@ -127,6 +215,17 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
       hideFloatingToolbar();
       setInsertOpen(false);
     }
+
+    function onSelectionChange() {
+      const root = editor.current;
+      const selection = window.getSelection();
+      if (!root || !selection?.anchorNode || !root.contains(selection.anchorNode)) {
+        if (floatBarVisible.current) hideFloatingToolbar();
+        return;
+      }
+      scheduleFloatingToolbar();
+    }
+
     function onKey(event: KeyboardEvent) {
       if (!(event.ctrlKey || event.metaKey) || !editor.current?.contains(document.activeElement)) return;
       if (event.key === "b") { event.preventDefault(); command("bold"); }
@@ -134,20 +233,28 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
       if (event.key === "k") { event.preventDefault(); link(); }
       if (event.key === "u") { event.preventDefault(); command("underline"); }
     }
+
     window.addEventListener("scroll", onScrollOrResize, true);
     window.addEventListener("resize", onScrollOrResize);
+    document.addEventListener("pointermove", onPointerMove, { passive: true });
     document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("selectionchange", onSelectionChange);
     document.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("scroll", onScrollOrResize, true);
       window.removeEventListener("resize", onScrollOrResize);
+      document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("selectionchange", onSelectionChange);
       document.removeEventListener("keydown", onKey);
+      if (selectionRaf.current != null) cancelAnimationFrame(selectionRaf.current);
     };
-  }, [floatBar.show]);
+  }, []);
 
   function hideFloatingToolbar() {
-    setFloatBar({ show: false, x: 0, y: 0 });
+    floatBarVisible.current = false;
+    pointerPos.current = null;
+    setFloatBar({ show: false, x: 0, y: 0, below: false });
   }
 
   function updateFloatingToolbar() {
@@ -157,18 +264,55 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
       hideFloatingToolbar();
       return;
     }
+    if (selection.focusNode && !root.contains(selection.focusNode)) {
+      hideFloatingToolbar();
+      return;
+    }
     try {
       const range = selection.getRangeAt(0);
       savedSelection.current = range.cloneRange();
-      const rect = range.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) {
+      const rects = Array.from(range.getClientRects()).filter((r) => r.width > 0 || r.height > 0);
+      let rect = rects.length
+        ? rects[rects.length - 1]
+        : range.getBoundingClientRect();
+
+      // Prefer the selection end nearest the pointer while dragging.
+      if (rects.length > 1 && pointerPos.current) {
+        let best = rects[0];
+        let bestDist = Number.POSITIVE_INFINITY;
+        for (const candidate of rects) {
+          const cx = candidate.left + candidate.width / 2;
+          const cy = candidate.top + candidate.height / 2;
+          const dist = Math.hypot(cx - pointerPos.current.x, cy - pointerPos.current.y);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = candidate;
+          }
+        }
+        rect = best;
+      }
+
+      if ((!rect || (rect.width === 0 && rect.height === 0)) && pointerPos.current) {
+        rect = new DOMRect(pointerPos.current.x, pointerPos.current.y, 1, 1);
+      }
+      if (!rect || (rect.width === 0 && rect.height === 0)) {
         hideFloatingToolbar();
         return;
       }
-      const pad = 8;
-      const x = Math.min(Math.max(rect.left + rect.width / 2, pad + 80), window.innerWidth - pad - 80);
-      const y = Math.max(rect.top - 10, pad + 40);
-      setFloatBar({ show: true, x, y });
+
+      const pad = 10;
+      const x = Math.min(
+        Math.max(rect.left + rect.width / 2, pad + FLOAT_BAR_HALF_WIDTH),
+        window.innerWidth - pad - FLOAT_BAR_HALF_WIDTH,
+      );
+      const spaceAbove = rect.top;
+      const below = spaceAbove < 56;
+      const y = below
+        ? Math.min(rect.bottom + 10, window.innerHeight - pad)
+        : Math.max(rect.top - 8, pad);
+
+      floatBarVisible.current = true;
+      setFloatBar({ show: true, x, y, below });
       setBlock(detectBlock());
     } catch {
       hideFloatingToolbar();
@@ -221,11 +365,41 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
     sync();
   }
 
+  function selectImage(img: HTMLImageElement | null) {
+    if (!img) {
+      setSelectedImage(null);
+      setImageTitle("");
+      setImageCaption("");
+      return;
+    }
+    ensureImageFigure(img);
+    const meta = readImageMeta(img);
+    setSelectedImage(img);
+    setImageTitle(meta.title);
+    setImageCaption(meta.caption);
+  }
+
+  function applyImageTitle(next: string) {
+    if (!selectedImage) return;
+    selectedImage.setAttribute("alt", next);
+    selectedImage.setAttribute("title", next);
+    setImageTitle(next);
+    sync();
+  }
+
+  function applyImageCaption(next: string) {
+    if (!selectedImage) return;
+    const figure = ensureImageFigure(selectedImage);
+    const caption = figure.querySelector("figcaption");
+    if (caption) caption.textContent = next;
+    setImageCaption(next);
+    sync();
+  }
+
   function link() {
     restoreSelection();
-    const value = prompt("Paste link URL");
-    if (value) command("createLink", value);
-    else requestAnimationFrame(updateFloatingToolbar);
+    hideFloatingToolbar();
+    setUrlDialog("link");
   }
 
   function floatCommand(action: string, value?: string) {
@@ -263,31 +437,46 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
 
   function video() {
     setInsertOpen(false);
-    const value = prompt("Paste a YouTube or Vimeo link");
-    if (!value) return;
-    const embedUrl = toVideoEmbedUrl(value);
-    if (!embedUrl) {
-      setNotice("That link doesn’t look like a YouTube or Vimeo video.");
-      return;
-    }
-    command("insertHTML", `${videoEmbedHtml(embedUrl)}<p><br></p>`);
+    setUrlDialog("video");
   }
 
   function imageUrl() {
     setInsertOpen(false);
-    const value = prompt("Paste image URL");
-    if (!value?.trim()) return;
-    command("insertHTML", `${imageEmbedHtml(value.trim())}<p><br></p>`);
-    setNotice("Image inserted.");
+    setUrlDialog("image");
   }
 
   function pdfFromUrl() {
     setInsertOpen(false);
-    const value = prompt("Paste PDF URL");
-    if (!value?.trim()) return;
-    const title = prompt("PDF title (optional)") || "View PDF";
-    command("insertHTML", `${pdfEmbedHtml(value.trim(), title)}<p><br></p>`);
-    setNotice("PDF embedded.");
+    setUrlDialog("pdf");
+  }
+
+  function handleUrlConfirm(value: string, secondary?: string) {
+    const kind = urlDialog;
+    setUrlDialog(null);
+    if (!kind) return;
+    if (kind === "link") {
+      restoreSelection();
+      command("createLink", value);
+      return;
+    }
+    if (kind === "video") {
+      const embedUrl = toVideoEmbedUrl(value);
+      if (!embedUrl) {
+        setNotice("That link doesn’t look like a YouTube or Vimeo video.");
+        return;
+      }
+      command("insertHTML", `${videoEmbedHtml(embedUrl)}<p><br></p>`);
+      return;
+    }
+    if (kind === "image") {
+      command("insertHTML", `${imageEmbedHtml(value)}<p><br></p>`);
+      setNotice("Image inserted. Click it to edit title and caption.");
+      return;
+    }
+    if (kind === "pdf") {
+      command("insertHTML", `${pdfEmbedHtml(value, secondary || "View PDF")}<p><br></p>`);
+      setNotice("PDF embedded.");
+    }
   }
 
   async function onFileSelected(event: ChangeEvent<HTMLInputElement>) {
@@ -301,9 +490,10 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
       if (file.type === "application/pdf") {
         command("insertHTML", `${pdfEmbedHtml(url, file.name)}<p><br></p>`);
       } else {
-        command("insertHTML", `${imageEmbedHtml(url, file.name)}<p><br></p>`);
+        const title = imageTitleFromFileName(file.name);
+        command("insertHTML", `${imageEmbedHtml(url, title)}<p><br></p>`);
       }
-      setNotice("File inserted.");
+      setNotice("File inserted. Click an image to edit its title and caption.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Upload failed.");
     } finally {
@@ -320,11 +510,14 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
     setNotice("Uploading image…");
     try {
       const url = await uploadEditorImage(file);
-      command(
-        "insertHTML",
-        `<img src="${url.replace(/"/g, "&quot;")}" alt="${file.name.replace(/"/g, "&quot;")}" />`,
-      );
-      setNotice("Image uploaded.");
+      const title = imageTitleFromFileName(file.name);
+      command("insertHTML", `${imageEmbedHtml(url, title)}<p><br></p>`);
+      setNotice("Image uploaded. Click it to edit the title and caption.");
+      requestAnimationFrame(() => {
+        const imgs = editor.current?.querySelectorAll("img");
+        const last = imgs?.[imgs.length - 1];
+        if (last instanceof HTMLImageElement) selectImage(last);
+      });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Image upload failed.");
     } finally {
@@ -528,6 +721,24 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
         {selectedImage && (
           <div className="image-settings">
             <span>Selected image</span>
+            <label className="image-settings-field">
+              Title
+              <input
+                type="text"
+                value={imageTitle}
+                placeholder="Image title"
+                onChange={(event) => applyImageTitle(event.target.value)}
+              />
+            </label>
+            <label className="image-settings-field image-settings-field-wide">
+              Caption
+              <input
+                type="text"
+                value={imageCaption}
+                placeholder="Short text under the image"
+                onChange={(event) => applyImageCaption(event.target.value)}
+              />
+            </label>
             <button type="button" onClick={() => { selectedImage.style.width = "50%"; sync(); }}>
               50%
             </button>
@@ -547,8 +758,9 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             <button
               type="button"
               onClick={() => {
-                selectedImage.remove();
-                setSelectedImage(null);
+                const figure = selectedImage.closest("figure");
+                (figure || selectedImage).remove();
+                selectImage(null);
                 sync();
               }}
             >
@@ -556,6 +768,34 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             </button>
           </div>
         )}
+
+        <EditorUrlDialog
+          open={urlDialog !== null}
+          title={
+            urlDialog === "link"
+              ? "Insert link"
+              : urlDialog === "video"
+                ? "Embed video"
+                : urlDialog === "image"
+                  ? "Insert image from URL"
+                  : "Embed PDF"
+          }
+          label={
+            urlDialog === "link"
+              ? "Link URL"
+              : urlDialog === "video"
+                ? "YouTube or Vimeo URL"
+                : urlDialog === "image"
+                  ? "Image URL"
+                  : "PDF URL"
+          }
+          placeholder="https://"
+          confirmLabel="Insert"
+          secondaryLabel={urlDialog === "pdf" ? "PDF title (optional)" : undefined}
+          secondaryPlaceholder={urlDialog === "pdf" ? "View PDF" : undefined}
+          onConfirm={handleUrlConfirm}
+          onCancel={() => setUrlDialog(null)}
+        />
 
         {mode === "markdown" && (
           <div className="so-md-hint" role="note">
@@ -572,9 +812,13 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
           contentEditable
           suppressContentEditableWarning
           data-placeholder={placeholder}
-          onInput={() => {
+          onInput={(event) => {
             sync();
             updateFloatingToolbar();
+            if (selectedImage && event.target instanceof HTMLElement && event.target.closest("figcaption")) {
+              const text = event.target.textContent?.trim() || "";
+              setImageCaption(text === CAPTION_PLACEHOLDER ? "" : text);
+            }
           }}
           onKeyUp={() => {
             sync();
@@ -585,9 +829,21 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             updateFloatingToolbar();
           }}
           onSelect={updateFloatingToolbar}
-          onClick={(event) =>
-            setSelectedImage(event.target instanceof HTMLImageElement ? event.target : null)
-          }
+          onClick={(event) => {
+            const target = event.target;
+            if (target instanceof HTMLImageElement) {
+              selectImage(target);
+              return;
+            }
+            if (target instanceof HTMLElement && target.closest("figcaption")) {
+              const img = target.closest("figure")?.querySelector("img");
+              if (img instanceof HTMLImageElement) {
+                selectImage(img);
+                return;
+              }
+            }
+            selectImage(null);
+          }}
           onPaste={(event) => {
             event.preventDefault();
             document.execCommand(
@@ -599,50 +855,66 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
           }}
         />
 
-        {floatBar.show && (
-          <div
-            className="selection-float-toolbar"
-            role="toolbar"
-            aria-label="Selection formatting"
-            style={{ left: floatBar.x, top: floatBar.y }}
-            onMouseDown={(event) => event.preventDefault()}
-          >
-            <button type="button" title="Bold" onClick={() => floatCommand("bold")}>
-              <EditorIcons.Bold />
-            </button>
-            <button type="button" title="Italic" onClick={() => floatCommand("italic")}>
-              <EditorIcons.Italic />
-            </button>
-            <button type="button" title="Strikethrough" onClick={() => floatCommand("strikeThrough")}>
-              <EditorIcons.Strike />
-            </button>
-            <i className="selection-float-sep" />
-            <button type="button" title="Heading 2" onClick={() => floatHeading("h2")}>
-              <EditorIcons.Heading />
-            </button>
-            <button type="button" title="Paragraph" onClick={() => floatHeading("p")}>
-              <span className="selection-float-p">P</span>
-            </button>
-            <i className="selection-float-sep" />
-            <button type="button" title="Inline code" onClick={floatCode}>
-              <EditorIcons.Code />
-            </button>
-            <button type="button" title="Link" onClick={link}>
-              <EditorIcons.Link />
-            </button>
-            <button
-              type="button"
-              title="Quote"
-              onClick={() => {
-                restoreSelection();
-                applyBlock("blockquote");
-                requestAnimationFrame(updateFloatingToolbar);
-              }}
+        {floatBar.show &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <div
+              className={`selection-float-toolbar${floatBar.below ? " is-below" : ""}`}
+              role="toolbar"
+              aria-label="Selection formatting"
+              style={{ left: floatBar.x, top: floatBar.y }}
+              onMouseDown={(event) => event.preventDefault()}
             >
-              <EditorIcons.Quote />
-            </button>
-          </div>
-        )}
+              <button type="button" title="Bold" onClick={() => floatCommand("bold")}>
+                <EditorIcons.Bold />
+              </button>
+              <button type="button" title="Italic" onClick={() => floatCommand("italic")}>
+                <EditorIcons.Italic />
+              </button>
+              <button type="button" title="Underline" onClick={() => floatCommand("underline")}>
+                <EditorIcons.Underline />
+              </button>
+              <button type="button" title="Strikethrough" onClick={() => floatCommand("strikeThrough")}>
+                <EditorIcons.Strike />
+              </button>
+              <i className="selection-float-sep" />
+              <button type="button" title="Heading 2" onClick={() => floatHeading("h2")}>
+                <EditorIcons.Heading />
+              </button>
+              <button type="button" title="Paragraph" onClick={() => floatHeading("p")}>
+                <span className="selection-float-p">P</span>
+              </button>
+              <button
+                type="button"
+                title="Quote"
+                onClick={() => {
+                  restoreSelection();
+                  applyBlock("blockquote");
+                  requestAnimationFrame(updateFloatingToolbar);
+                }}
+              >
+                <EditorIcons.Quote />
+              </button>
+              <i className="selection-float-sep" />
+              <button type="button" title="Inline code" onClick={floatCode}>
+                <EditorIcons.Code />
+              </button>
+              <button type="button" title="Link" onClick={link}>
+                <EditorIcons.Link />
+              </button>
+              <button
+                type="button"
+                title="Bulleted list"
+                onClick={() => {
+                  restoreSelection();
+                  floatCommand("insertUnorderedList");
+                }}
+              >
+                <EditorIcons.Ul />
+              </button>
+            </div>,
+            document.body,
+          )}
 
         <footer className="editor-status">
           <span>

@@ -5,11 +5,12 @@ import type { Locale } from "@/components/LanguageSelect";
 import { usePoilianLocale } from "@/hooks/usePoilianLocale";
 import { FooterDottedMap } from "@/components/FooterDottedMap";
 import { SiteLogo } from "@/components/SiteLogo";
+import { openCookieSettings } from "@/lib/cookieConsent";
 
-const copy: Record<Locale, { description: string; admin: string; space: string; rights: string; links: [string, string, string, string, string] }> = {
-  en: { description: "Stories, research and local insight from Algeria.", admin: "Admin login", space: "My space", rights: "All Rights Reserved.", links: ["Home", "Posts", "Projects", "About", "Contact"] },
-  fr: { description: "Récits, recherches et perspectives locales depuis l’Algérie.", admin: "Connexion administrateur", space: "Mon espace", rights: "Tous droits réservés.", links: ["Accueil", "Articles", "Projets", "À propos", "Contact"] },
-  ar: { description: "قصص وأبحاث ورؤى محلية من الجزائر.", admin: "دخول الإدارة", space: "مساحتي", rights: "جميع الحقوق محفوظة.", links: ["الرئيسية", "المقالات", "المشاريع", "من نحن", "اتصل بنا"] },
+const copy: Record<Locale, { description: string; admin: string; space: string; rights: string; cookies: string; links: [string, string, string, string, string] }> = {
+  en: { description: "Stories, research and local insight from Algeria.", admin: "Admin login", space: "My space", rights: "All Rights Reserved.", cookies: "Cookie settings", links: ["Home", "Posts", "Projects", "About", "Contact"] },
+  fr: { description: "Récits, recherches et perspectives locales depuis l’Algérie.", admin: "Connexion administrateur", space: "Mon espace", rights: "Tous droits réservés.", cookies: "Paramètres cookies", links: ["Accueil", "Articles", "Projets", "À propos", "Contact"] },
+  ar: { description: "قصص وأبحاث ورؤى محلية من الجزائر.", admin: "دخول الإدارة", space: "مساحتي", rights: "جميع الحقوق محفوظة.", cookies: "إعدادات ملفات الارتباط", links: ["الرئيسية", "المقالات", "المشاريع", "من نحن", "اتصل بنا"] },
 };
 
 export function BlogFooter() {
@@ -35,6 +36,9 @@ export function BlogFooter() {
                 <Link href="/about">{text.links[3]}</Link>
                 <Link href="/contact">{text.links[4]}</Link>
                 <Link href="/space">{text.space}</Link>
+                <button type="button" className="footer-cookie-settings" onClick={() => openCookieSettings()}>
+                  {text.cookies}
+                </button>
                 <Link className="footer-admin-login" href="/admin">{text.admin}</Link>
               </nav>
               <nav className="reference-footer-social" aria-label="Social channels">

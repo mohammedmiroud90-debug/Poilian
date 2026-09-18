@@ -22,8 +22,17 @@ export function pdfEmbedHtml(url: string, title = "View PDF") {
   return `<div class="pdf-embed" contenteditable="false"><a class="pdf-embed-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeTitle}</a><iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe></div>`;
 }
 
-export function imageEmbedHtml(url: string, alt = "") {
+export function imageEmbedHtml(url: string, alt = "", caption = "") {
   const safeUrl = url.replace(/"/g, "&quot;");
   const safeAlt = alt.replace(/"/g, "&quot;");
-  return `<figure class="editor-figure"><img src="${safeUrl}" alt="${safeAlt}" /><figcaption contenteditable="true">Add a caption…</figcaption></figure>`;
+  const safeCaption = caption
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return `<figure class="editor-figure"><img src="${safeUrl}" alt="${safeAlt}" title="${safeAlt}" /><figcaption contenteditable="true" data-placeholder="Add a short caption…">${safeCaption}</figcaption></figure>`;
+}
+
+/** Human-readable title from an uploaded filename. */
+export function imageTitleFromFileName(name: string) {
+  return name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { adminWriteHeaders, currentAdmin, parseConfigured, url } from "@/lib/admin";
 import { defaultCommentAvatarUrl, defaultFaviconUrl, defaultLogoUrl } from "@/lib/branding";
+import { isPostFontId } from "@/lib/postFonts";
 
 const isImageSource = (value: string) => /^https?:\/\//i.test(value) || value.startsWith("/");
 
@@ -14,6 +15,8 @@ export async function PUT(request: Request) {
     logoUrl?: unknown;
     commentAvatarUrl?: unknown;
     faviconUrl?: unknown;
+    postContentFont?: unknown;
+    postHeadingFont?: unknown;
   };
   const payload: {
     key: string;
@@ -21,6 +24,8 @@ export async function PUT(request: Request) {
     logoUrl?: string;
     commentAvatarUrl?: string;
     faviconUrl?: string;
+    postContentFont?: string;
+    postHeadingFont?: string;
   } = { key: "primary" };
 
   if ("promotionImage" in body) {
@@ -43,7 +48,26 @@ export async function PUT(request: Request) {
     if (!isImageSource(faviconUrl)) return NextResponse.json({ error: "Use a valid favicon image URL." }, { status: 400 });
     payload.faviconUrl = faviconUrl;
   }
-  if (!payload.promotionImage && !payload.logoUrl && !payload.commentAvatarUrl && !payload.faviconUrl) {
+  if ("postContentFont" in body) {
+    if (!isPostFontId(body.postContentFont)) {
+      return NextResponse.json({ error: "Choose a valid post content font." }, { status: 400 });
+    }
+    payload.postContentFont = body.postContentFont;
+  }
+  if ("postHeadingFont" in body) {
+    if (!isPostFontId(body.postHeadingFont)) {
+      return NextResponse.json({ error: "Choose a valid post heading font." }, { status: 400 });
+    }
+    payload.postHeadingFont = body.postHeadingFont;
+  }
+  if (
+    !payload.promotionImage &&
+    !payload.logoUrl &&
+    !payload.commentAvatarUrl &&
+    !payload.faviconUrl &&
+    !payload.postContentFont &&
+    !payload.postHeadingFont
+  ) {
     return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
   }
 
@@ -62,7 +86,13 @@ export async function PUT(request: Request) {
     const detail = await response.text().catch(() => "");
     console.error("SiteProfile favicon/settings save failed", response.status, detail);
     return NextResponse.json(
-      { error: detail.includes("faviconUrl") ? "Parse rejected faviconUrl. Check the SiteProfile schema allows that field." : "Settings could not be saved." },
+      {
+        error: detail.includes("faviconUrl")
+          ? "Parse rejected faviconUrl. Check the SiteProfile schema allows that field."
+          : detail.includes("postContentFont") || detail.includes("postHeadingFont")
+            ? "Parse rejected font fields. Add postContentFont and postHeadingFont (String) to SiteProfile."
+            : "Settings could not be saved.",
+      },
       { status: 500 },
     );
   }
@@ -79,5 +109,7 @@ export async function PUT(request: Request) {
     logoUrl: payload.logoUrl || defaultLogoUrl,
     commentAvatarUrl: payload.commentAvatarUrl || defaultCommentAvatarUrl,
     faviconUrl: payload.faviconUrl || defaultFaviconUrl,
+    postContentFont: payload.postContentFont,
+    postHeadingFont: payload.postHeadingFont,
   });
 }

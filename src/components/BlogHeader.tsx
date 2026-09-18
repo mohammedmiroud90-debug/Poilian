@@ -20,6 +20,7 @@ const copy = {
     listen: "Listen",
     pause: "Pause",
     thread: "Thread",
+    subscribe: "Subscribe",
     trending: "TRENDING",
     trendingItems: [
       ["AI & security", "/posts?query=AI"],
@@ -39,6 +40,7 @@ const copy = {
     listen: "Écouter",
     pause: "Pause",
     thread: "Fil",
+    subscribe: "S’abonner",
     trending: "TENDANCES",
     trendingItems: [
       ["IA et sécurité", "/posts?query=AI"],
@@ -58,6 +60,7 @@ const copy = {
     listen: "استماع",
     pause: "إيقاف",
     thread: "النقاش",
+    subscribe: "اشترك",
     trending: "رائج",
     trendingItems: [
       ["الذكاء الاصطناعي والأمن", "/posts?query=AI"],
@@ -93,6 +96,32 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".header-menu-burger") || target.closest("#header-navigation")) return;
+      setMenuOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen || scrolled) return;
+    // Burger stays available on mobile even at the top — only auto-close on desktop when sticky burger hides.
+    const mobile = window.matchMedia("(max-width: 760px)").matches;
+    if (!mobile) setMenuOpen(false);
+  }, [scrolled, menuOpen]);
 
   useEffect(() => {
     const onState = (event: Event) => setListening(Boolean((event as CustomEvent<{ playing?: boolean }>).detail?.playing));
@@ -164,6 +193,14 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
     closeMenu();
   }
 
+  function scrollToSubscribe() {
+    const target =
+      document.getElementById("post-newsletter") ||
+      document.getElementById("inbox-newsletter");
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    closeMenu();
+  }
+
   return (
     <header 
       className={`page-header poilian-locale-copy${scrolled ? " is-scrolled" : ""}${isPostView ? " post-header" : ""}${isPostView && scrolled ? " post-sticky-mobile" : ""}`} 
@@ -218,11 +255,32 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
               </svg>
               <span>{text.thread}</span>
             </button>
+            <button type="button" className="post-subscribe-action" onClick={scrollToSubscribe}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7.5h16v11H4z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                <path d="m4.5 8 7.5 6 7.5-6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>{text.subscribe}</span>
+            </button>
           </nav>
         )}
 
         {/* Right side: Language, Search, LinkedIn / sticky profile */}
         <div className="header-utilities">
+          {isPostView && (
+            <button
+              type="button"
+              className="header-subscribe-toggle"
+              onClick={scrollToSubscribe}
+              aria-label={text.subscribe}
+              title={text.subscribe}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7.5h16v11H4z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                <path d="m4.5 8 7.5 6 7.5-6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
           <LanguageSelect value={locale} onLocaleChange={setLocale} />
           
           <button 
@@ -256,15 +314,6 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
           </a>
         </div>
 
-        {isPostView && (
-          <Link className="post-sticky-profile" href="/about" aria-label="Your profile">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" strokeWidth="1.7" />
-              <circle cx="12" cy="10" r="3.1" fill="none" stroke="currentColor" strokeWidth="1.7" />
-              <path d="M6.8 18.2a5.8 5.8 0 0 1 10.4 0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-            </svg>
-          </Link>
-        )}
         </div>
       </div>
       

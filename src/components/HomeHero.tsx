@@ -35,6 +35,9 @@ type Copy = {
   subscribeCta: string;
   subscribeThanks: string;
   closeSubscribe: string;
+  noThanks: string;
+  privacyNote: string;
+  privacyLink: string;
 };
 
 const copy: Record<Locale, Copy> = {
@@ -65,12 +68,15 @@ const copy: Record<Locale, Copy> = {
     chatContact: "Open full contact form",
     chatToggle: "Chat with me",
     letterLabel: "POILIAN LETTER",
-    letterTitle: "Keep in touch.",
-    letterBody: "Get occasional notes, new posts, and selected work delivered to your inbox.",
+    letterTitle: "Don't miss out on new notes",
+    letterBody: "Enter your email to get occasional posts, selected work, and updates from this journal.",
     emailLabel: "Email address",
-    subscribeCta: "Subscribe",
+    subscribeCta: "Get started",
     subscribeThanks: "Thank you — you are on the list.",
     closeSubscribe: "Close subscription form",
+    noThanks: "No thanks",
+    privacyNote: "We use the information you provide in accordance with our ",
+    privacyLink: "privacy policy",
   },
   fr: {
     nav: ["Accueil", "Articles", "Entreprises", "Notes personnelles", "Photographie", "Ask me", "À propos"],
@@ -99,12 +105,15 @@ const copy: Record<Locale, Copy> = {
     chatContact: "Ouvrir le formulaire de contact",
     chatToggle: "Discuter avec moi",
     letterLabel: "LETTRE POILIAN",
-    letterTitle: "Restons en contact.",
-    letterBody: "Recevez occasionnellement des notes, de nouveaux articles et une sélection de travaux.",
+    letterTitle: "Ne manquez pas les nouvelles notes",
+    letterBody: "Entrez votre e-mail pour recevoir occasionnellement des articles, des travaux sélectionnés et des mises à jour.",
     emailLabel: "Adresse e-mail",
-    subscribeCta: "S'abonner",
+    subscribeCta: "Commencer",
     subscribeThanks: "Merci — vous êtes sur la liste.",
     closeSubscribe: "Fermer le formulaire d'abonnement",
+    noThanks: "Non merci",
+    privacyNote: "Nous utilisons les informations que vous fournissez conformément à notre ",
+    privacyLink: "politique de confidentialité",
   },
   ar: {
     nav: ["الرئيسية", "المقالات", "الشركات", "ملاحظات شخصية", "التصوير", "اسألني", "من أنا"],
@@ -133,12 +142,15 @@ const copy: Record<Locale, Copy> = {
     chatContact: "فتح نموذج التواصل الكامل",
     chatToggle: "تحدث معي",
     letterLabel: "رسالة Poilian",
-    letterTitle: "ابقَ على تواصل.",
-    letterBody: "احصل أحيانًا على ملاحظات ومقالات جديدة وأعمال مختارة في بريدك.",
+    letterTitle: "لا تفوّت الملاحظات الجديدة",
+    letterBody: "أدخل بريدك لتصلك مقالات وأعمال مختارة وتحديثات من هذه المدونة من حين لآخر.",
     emailLabel: "البريد الإلكتروني",
-    subscribeCta: "اشترك",
+    subscribeCta: "ابدأ",
     subscribeThanks: "شكرًا — أنت على القائمة.",
     closeSubscribe: "إغلاق نموذج الاشتراك",
+    noThanks: "لا، شكرًا",
+    privacyNote: "نستخدم المعلومات التي تقدمها وفقًا لـ ",
+    privacyLink: "سياسة الخصوصية",
   },
 };
 
@@ -300,25 +312,41 @@ export function HomeHero({ authorAvatarUrl }: { authorAvatarUrl: string }) {
           </button>
         </aside>
         {subscribeOpen && (
-          <aside className="subscribe-modal" aria-label={text.subscribe}>
-            <form onSubmit={subscribe}>
-              <span className="subscribe-hand" aria-hidden="true">
-                ☝
-              </span>
+          <aside className="subscribe-modal" aria-label={text.subscribe} role="dialog" aria-modal="true">
+            <form className="subscribe-card" onSubmit={subscribe}>
               <button className="subscribe-close" type="button" onClick={() => setSubscribeOpen(false)} aria-label={text.closeSubscribe}>
                 ×
               </button>
-              <p className="section-label">{text.letterLabel}</p>
+              <div className="subscribe-brand">
+                <SiteLogo alt="Poilian" width={168} height={64} />
+              </div>
               <h2>{text.letterTitle}</h2>
-              <p>{text.letterBody}</p>
-              <label>
+              <p className="subscribe-lead">{text.letterBody}</p>
+              <label className="sr-only" htmlFor="home-subscribe-email">
                 {text.emailLabel}
-                <input type="email" placeholder="you@example.com" required />
               </label>
-              <button type="submit">
-                {text.subscribeCta} <span>→</span>
+              <input
+                id="home-subscribe-email"
+                type="email"
+                name="email"
+                placeholder={text.emailLabel}
+                required
+                autoComplete="email"
+              />
+              <button className="subscribe-submit" type="submit">
+                {text.subscribeCta}
               </button>
-              {subscribeNotice && <small className="subscribe-notice">{subscribeNotice}</small>}
+              <button className="subscribe-dismiss" type="button" onClick={() => setSubscribeOpen(false)}>
+                {text.noThanks}
+              </button>
+              {subscribeNotice ? (
+                <small className="subscribe-notice">{subscribeNotice}</small>
+              ) : (
+                <p className="subscribe-legal">
+                  {text.privacyNote}
+                  <Link href="/privacy">{text.privacyLink}</Link>.
+                </p>
+              )}
             </form>
           </aside>
         )}

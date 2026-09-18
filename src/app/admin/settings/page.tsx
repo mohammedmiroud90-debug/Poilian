@@ -10,6 +10,8 @@ export default async function SettingsPage() {
       initialLogo={profile.logoUrl}
       initialCommentAvatar={profile.commentAvatarUrl}
       initialFavicon={profile.faviconUrl}
+      initialPostContentFont={profile.postContentFont}
+      initialPostHeadingFont={profile.postHeadingFont}
       initialNotes={await getNotes(true)}
     />
   );

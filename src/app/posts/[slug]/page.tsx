@@ -35,6 +35,16 @@ function readingTime(text: string): number {
     .filter(Boolean).length;
   return Math.max(1, Math.ceil(words / 220));
 }
+
+/** Split rich HTML near the midpoint on block boundaries for mid-article embeds. */
+function splitHtmlHalfway(html: string): [string, string] {
+  const source = html.trim();
+  if (!source) return ["", ""];
+  const parts = source.split(/(?=<(?:p|h[1-6]|blockquote|ul|ol|figure|div|pre|table|hr)\b)/i).filter(Boolean);
+  if (parts.length < 2) return [source, ""];
+  const mid = Math.max(1, Math.ceil(parts.length / 2));
+  return [parts.slice(0, mid).join(""), parts.slice(mid).join("")];
+}
 const idFrom = (value: string, index: number) =>
   `${
     value
@@ -234,66 +244,103 @@ export default async function PostPage({
     });
   }
   
-  const article = hasHtmlContent ? (
-    <article 
-      className="post-body rich-post-content" 
-      dangerouslySetInnerHTML={{ __html: sanitizeHtml(processedHtmlContent || "") }}
-    />
-  ) : (
-    <article className="post-body">
-      {blocks.map((block, index) => {
-        if (block.kind === "heading") {
-          const Tag = (block.level ?? 2) >= 3 ? "h3" : "h2";
-          return (
-            <Tag id={block.id} key={`${block.id}-${index}`}>
-              <InlineCode value={block.value} />
-            </Tag>
-          );
-        }
-        if (block.kind === "code") return <CodeBlock code={block.value} key={index} />;
-        if (block.kind === "image") return <figure className="post-image" key={index}><img src={block.value} alt={block.alt || ""} loading="lazy" />{block.alt && <figcaption>{block.alt}</figcaption>}</figure>;
-        if (block.kind === "video") {
-          const embedUrl = toVideoEmbedUrl(block.value);
-          return embedUrl ? (
-            <div className="video-embed" key={index}>
-              <iframe src={embedUrl} title="Embedded video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-            </div>
-          ) : null;
-        }
-        if (block.kind === "unordered")
-          return (
-            <ul key={index}>
-              {block.items?.map((item, itemIndex) => (
-                <li key={itemIndex}>
-                  <InlineCode value={item} />
-                </li>
-              ))}
-            </ul>
-          );
-        if (block.kind === "ordered")
-          return (
-            <ol key={index}>
-              {block.items?.map((item, itemIndex) => (
-                <li key={itemIndex}>
-                  <InlineCode value={item} />
-                </li>
-              ))}
-            </ol>
-          );
-        if (block.kind === "quote")
-          return (
-            <blockquote key={index}>
-              <InlineCode value={block.value} />
-            </blockquote>
-          );
-        return (
-          <p key={index}>
-            <InlineCode value={block.value} />
-          </p>
-        );
-      })}
-    </article>
-  );
+  function renderBlock(block: Block, index: number) {
+    if (block.kind === "heading") {
+      const Tag = (block.level ?? 2) >= 3 ? "h3" : "h2";
+      return (
+        <Tag id={block.id} key={`${block.id}-${index}`}>
+          <InlineCode value={block.value} />
+        </Tag>
+      );
+    }
+    if (block.kind === "code") return <CodeBlock code={block.value} key={index} />;
+    if (block.kind === "image") {
+      return (
+        <figure className="post-image" key={index}>
+          <img src={block.value} alt={block.alt || ""} loading="lazy" />
+          {block.alt && <figcaption>{block.alt}</figcaption>}
+        </figure>
+      );
+    }
+    if (block.kind === "video") {
+      const embedUrl = toVideoEmbedUrl(block.value);
+      return embedUrl ? (
+        <div className="video-embed" key={index}>
+          <iframe
+            src={embedUrl}
+            title="Embedded video"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      ) : null;
+    }
+    if (block.kind === "unordered") {
+      return (
+        <ul key={index}>
+          {block.items?.map((item, itemIndex) => (
+            <li key={itemIndex}>
+              <InlineCode value={item} />
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    if (block.kind === "ordered") {
+      return (
+        <ol key={index}>
+          {block.items?.map((item, itemIndex) => (
+            <li key={itemIndex}>
+              <InlineCode value={item} />
+            </li>
+          ))}
+        </ol>
+      );
+    }
+    if (block.kind === "quote") {
+      return (
+        <blockquote key={index}>
+          <InlineCode value={block.value} />
+        </blockquote>
+      );
+    }
+    return (
+      <p key={index}>
+        <InlineCode value={block.value} />
+      </p>
+    );
+  }
+
+  const midNewsletter = <InboxNewsletter variant="promo" />;
+
+  const article = hasHtmlContent ? (() => {
+    const safeHtml = sanitizeHtml(processedHtmlContent || "");
+    const [htmlBefore, htmlAfter] = splitHtmlHalfway(safeHtml);
+    return (
+      <article className="post-body rich-post-content">
+        <div className="post-body-part" dangerouslySetInnerHTML={{ __html: htmlBefore }} />
+        {midNewsletter}
+        {htmlAfter ? (
+          <div
+            className="post-body-part post-body-part--continued"
+            dangerouslySetInnerHTML={{ __html: htmlAfter }}
+          />
+        ) : null}
+      </article>
+    );
+  })() : (() => {
+    const mid = Math.max(1, Math.ceil(blocks.length / 2));
+    const before = blocks.slice(0, mid);
+    const after = blocks.slice(mid);
+    return (
+      <article className="post-body">
+        {before.map(renderBlock)}
+        {midNewsletter}
+        {after.map((block, i) => renderBlock(block, mid + i))}
+      </article>
+    );
+  })();
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -348,7 +395,7 @@ export default async function PostPage({
         <PostAuthor author={authorProfile.name} bio={authorProfile.bio} avatarUrl={authorProfile.avatarUrl} />
         <CommentSection postId={post.id} initialComments={comments} />
       </main>
-      <InboxNewsletter />
+      <InboxNewsletter variant="classic" />
     </>
   );
 }

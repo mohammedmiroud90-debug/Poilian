@@ -5,9 +5,12 @@ import { useEffect, useState } from "react";
 import type { Locale } from "@/components/LanguageSelect";
 import { SiteLogo } from "@/components/SiteLogo";
 import { usePoilianLocale } from "@/hooks/usePoilianLocale";
-
-const noticeKey = "poilian-personal-cookie-notice-dismissed";
-const consentKey = "poilian-personal-cookie-consent";
+import {
+  OPEN_COOKIE_SETTINGS_EVENT,
+  readConsent,
+  writeConsent,
+  type CookieConsent,
+} from "@/lib/cookieConsent";
 
 type CookieCopy = {
   title: string;
@@ -42,7 +45,7 @@ const copy: Record<Locale, CookieCopy> = {
     privacy: "Privacy Policy",
     p2After: ".",
     p3: "Necessary cookies are always active. Optional analytics cookies are anonymous and first-party only.",
-    p4: "Choose Accept to allow all cookies, Only necessary to keep essentials, or Settings to customize.",
+    p4: "Choose Accept to allow analytics, Only necessary to keep essentials, or Settings to customize. Analytics stay off until you opt in.",
     imprint: "Terms",
     accept: "Accept",
     necessary: "Only necessary",
@@ -51,7 +54,7 @@ const copy: Record<Locale, CookieCopy> = {
     necessaryLabel: "Necessary cookies",
     necessaryHelp: "Required for the site to function. Always active.",
     analyticsLabel: "Analytics cookies",
-    analyticsHelp: "Helps understand which pages are useful. Anonymous, first-party only.",
+    analyticsHelp: "Helps understand which pages are useful. Anonymous, first-party only. Off until you enable them.",
     confirm: "Confirm choices",
     back: "Back",
   },
@@ -64,7 +67,7 @@ const copy: Record<Locale, CookieCopy> = {
     privacy: "Politique de confidentialité",
     p2After: ".",
     p3: "Les cookies nécessaires sont toujours actifs. Les cookies d’analyse optionnels sont anonymes et first-party uniquement.",
-    p4: "Choisissez Accepter pour tout autoriser, Uniquement nécessaires pour les essentiels, ou Paramètres pour personnaliser.",
+    p4: "Choisissez Accepter pour autoriser l’analyse, Uniquement nécessaires pour les essentiels, ou Paramètres pour personnaliser. L’analyse reste inactive tant que vous n’avez pas consenti.",
     imprint: "Conditions",
     accept: "Accepter",
     necessary: "Uniquement nécessaires",
@@ -73,7 +76,7 @@ const copy: Record<Locale, CookieCopy> = {
     necessaryLabel: "Cookies nécessaires",
     necessaryHelp: "Requis pour le fonctionnement du site. Toujours actifs.",
     analyticsLabel: "Cookies d'analyse",
-    analyticsHelp: "Aident à comprendre quelles pages sont utiles. Anonymes et first-party uniquement.",
+    analyticsHelp: "Aident à comprendre quelles pages sont utiles. Anonymes et first-party uniquement. Désactivés jusqu’à votre accord.",
     confirm: "Confirmer les choix",
     back: "Retour",
   },
@@ -86,7 +89,7 @@ const copy: Record<Locale, CookieCopy> = {
     privacy: "سياسة الخصوصية",
     p2After: ".",
     p3: "ملفات تعريف الارتباط الضرورية نشطة دائمًا. ملفات التحليل الاختيارية مجهولة ومن الطرف الأول فقط.",
-    p4: "اختر قبول للكل، أو الضروري فقط، أو الإعدادات للتخصيص.",
+    p4: "اختر قبول للتحليلات، أو الضروري فقط، أو الإعدادات للتخصيص. تبقى التحليلات متوقفة حتى توافق.",
     imprint: "الشروط",
     accept: "قبول",
     necessary: "الضروري فقط",
@@ -95,7 +98,7 @@ const copy: Record<Locale, CookieCopy> = {
     necessaryLabel: "ملفات تعريف الارتباط الضرورية",
     necessaryHelp: "مطلوبة لعمل الموقع. نشطة دائمًا.",
     analyticsLabel: "ملفات تحليلات",
-    analyticsHelp: "تساعد على فهم الصفحات المفيدة. مجهولة ومن الطرف الأول فقط.",
+    analyticsHelp: "تساعد على فهم الصفحات المفيدة. مجهولة ومن الطرف الأول فقط. متوقفة حتى تفعّلها.",
     confirm: "تأكيد الاختيارات",
     back: "رجوع",
   },
@@ -104,17 +107,28 @@ const copy: Record<Locale, CookieCopy> = {
 export function CookieBanner() {
   const [visible, setVisible] = useState(false);
   const [customizing, setCustomizing] = useState(false);
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
   const [locale] = usePoilianLocale();
 
   useEffect(() => {
-    setVisible(window.localStorage.getItem(noticeKey) !== "true");
+    const existing = readConsent();
+    setVisible(existing === null);
+    setAnalyticsEnabled(existing === "all");
+
+    function onOpenSettings() {
+      const current = readConsent();
+      setAnalyticsEnabled(current === "all");
+      setCustomizing(true);
+      setVisible(true);
+    }
+    window.addEventListener(OPEN_COOKIE_SETTINGS_EVENT, onOpenSettings);
+    return () => window.removeEventListener(OPEN_COOKIE_SETTINGS_EVENT, onOpenSettings);
   }, []);
 
-  function save(consent: "all" | "necessary") {
-    window.localStorage.setItem(noticeKey, "true");
-    window.localStorage.setItem(consentKey, consent);
+  function save(consent: CookieConsent) {
+    writeConsent(consent);
     setVisible(false);
+    setCustomizing(false);
   }
 
   if (!visible) return null;

@@ -1,6 +1,11 @@
 import { headers, parseConfigured, url } from "@/lib/admin";
 import { defaultCommentAvatarUrl, defaultFaviconUrl, defaultLogoUrl } from "@/lib/branding";
 import { defaultPromotionImage } from "@/lib/promotion";
+import {
+  DEFAULT_POST_CONTENT_FONT,
+  DEFAULT_POST_HEADING_FONT,
+  isPostFontId,
+} from "@/lib/postFonts";
 
 export { defaultCommentAvatarUrl, defaultFaviconUrl, defaultLogoUrl } from "@/lib/branding";
 export { defaultPromotionImage } from "@/lib/promotion";
@@ -14,6 +19,8 @@ export type AuthorProfile = {
   logoUrl: string;
   commentAvatarUrl: string;
   faviconUrl: string;
+  postContentFont: string;
+  postHeadingFont: string;
 };
 export const defaultAuthorProfile: AuthorProfile = {
   name: "Belhachemia Mohammed",
@@ -24,8 +31,11 @@ export const defaultAuthorProfile: AuthorProfile = {
   logoUrl: defaultLogoUrl,
   commentAvatarUrl: defaultCommentAvatarUrl,
   faviconUrl: defaultFaviconUrl,
+  postContentFont: DEFAULT_POST_CONTENT_FONT,
+  postHeadingFont: DEFAULT_POST_HEADING_FONT,
 };
 const clean = (value: unknown, fallback: string) => (typeof value === "string" && value.trim() ? value.trim() : fallback);
+const cleanFont = (value: unknown, fallback: string) => (isPostFontId(value) ? value : fallback);
 
 export async function getAuthorProfile(): Promise<AuthorProfile> {
   if (!parseConfigured) return defaultAuthorProfile;
@@ -49,6 +59,8 @@ export async function getAuthorProfile(): Promise<AuthorProfile> {
       logoUrl: clean(item.logoUrl, defaultLogoUrl),
       commentAvatarUrl: clean(item.commentAvatarUrl, defaultCommentAvatarUrl),
       faviconUrl: clean(item.faviconUrl, defaultFaviconUrl),
+      postContentFont: cleanFont(item.postContentFont, DEFAULT_POST_CONTENT_FONT),
+      postHeadingFont: cleanFont(item.postHeadingFont, DEFAULT_POST_HEADING_FONT),
     };
   } catch (error) {
     console.error("Parse author-profile lookup failed", error);

@@ -1,9 +1,16 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import type { Note } from "@/lib/notes";
 import { defaultCommentAvatarUrl, defaultFaviconUrl, defaultLogoUrl } from "@/lib/branding";
 import { defaultPromotionImage } from "@/lib/promotion";
+import {
+  DEFAULT_POST_CONTENT_FONT,
+  DEFAULT_POST_HEADING_FONT,
+  POST_FONTS,
+  getPostFont,
+  googleFontsStylesheetUrl,
+} from "@/lib/postFonts";
 
 type UploadKind = "banner" | "logo" | "comment" | "favicon";
 
@@ -12,18 +19,24 @@ export function SettingsManager({
   initialLogo,
   initialCommentAvatar,
   initialFavicon,
+  initialPostContentFont,
+  initialPostHeadingFont,
   initialNotes,
 }: {
   initialImage: string;
   initialLogo: string;
   initialCommentAvatar: string;
   initialFavicon: string;
+  initialPostContentFont: string;
+  initialPostHeadingFont: string;
   initialNotes: Note[];
 }) {
   const [image, setImage] = useState(initialImage || defaultPromotionImage);
   const [logo, setLogo] = useState(initialLogo || defaultLogoUrl);
   const [commentAvatar, setCommentAvatar] = useState(initialCommentAvatar || defaultCommentAvatarUrl);
   const [favicon, setFavicon] = useState(initialFavicon || defaultFaviconUrl);
+  const [postContentFont, setPostContentFont] = useState(initialPostContentFont || DEFAULT_POST_CONTENT_FONT);
+  const [postHeadingFont, setPostHeadingFont] = useState(initialPostHeadingFont || DEFAULT_POST_HEADING_FONT);
   const [notes, setNotes] = useState(initialNotes);
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -31,8 +44,22 @@ export function SettingsManager({
   const [notice, setNotice] = useState("");
   const [uploading, setUploading] = useState<UploadKind | "">("");
 
+  const previewFontsHref = useMemo(
+    () => googleFontsStylesheetUrl([postContentFont, postHeadingFont]),
+    [postContentFont, postHeadingFont],
+  );
+  const contentPreview = getPostFont(postContentFont);
+  const headingPreview = getPostFont(postHeadingFont);
+
   async function saveSettings(
-    body: { promotionImage?: string; logoUrl?: string; commentAvatarUrl?: string; faviconUrl?: string },
+    body: {
+      promotionImage?: string;
+      logoUrl?: string;
+      commentAvatarUrl?: string;
+      faviconUrl?: string;
+      postContentFont?: string;
+      postHeadingFont?: string;
+    },
     success: string,
   ) {
     setNotice("Saving…");
@@ -66,6 +93,16 @@ export function SettingsManager({
     if (ok && typeof window !== "undefined") {
       window.setTimeout(() => window.location.reload(), 400);
     }
+  }
+
+  async function savePostFonts(
+    nextContent = postContentFont,
+    nextHeading = postHeadingFont,
+  ) {
+    await saveSettings(
+      { postContentFont: nextContent, postHeadingFont: nextHeading },
+      "Post fonts saved. Open any article to see the new typography.",
+    );
   }
 
   async function upload(kind: UploadKind, event: ChangeEvent<HTMLInputElement>) {
@@ -133,13 +170,90 @@ export function SettingsManager({
 
   return (
     <section className="admin-list-page settings-manager">
+      {previewFontsHref ? <link rel="stylesheet" href={previewFontsHref} /> : null}
       <header className="admin-page-title">
         <div>
           <p className="section-label">SITE SETTINGS</p>
           <h1>Settings</h1>
-          <p>Manage your logo, favicon, comment avatars, article banner and personal notes.</p>
+          <p>Manage logos, post fonts, comment avatars, article banners and personal notes.</p>
         </div>
       </header>
+
+      <section className="settings-section settings-fonts-section">
+        <header className="settings-section-heading">
+          <div>
+            <p className="section-label">POSTS</p>
+            <h2>Post typography</h2>
+            <p>
+              Choose from 40 popular reading fonts for article titles and body text. Current defaults use site Ranade;
+              Google Fonts load only when selected.
+            </p>
+          </div>
+        </header>
+        <form
+          className="settings-fonts-form"
+          onSubmit={(event: FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
+            void savePostFonts();
+          }}
+        >
+          <div className="settings-fonts-grid">
+            <label>
+              Title / heading font
+              <select
+                value={postHeadingFont}
+                onChange={(event) => setPostHeadingFont(event.target.value)}
+                aria-label="Post heading font"
+              >
+                {POST_FONTS.map((font) => (
+                  <option value={font.id} key={font.id}>
+                    {font.label} ({font.category})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Body / content font
+              <select
+                value={postContentFont}
+                onChange={(event) => setPostContentFont(event.target.value)}
+                aria-label="Post content font"
+              >
+                {POST_FONTS.map((font) => (
+                  <option value={font.id} key={font.id}>
+                    {font.label} ({font.category})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="settings-font-preview" aria-live="polite">
+            <p className="settings-font-preview-label">Preview</p>
+            <h3 style={{ fontFamily: headingPreview.family }}>The DevOps Handbook revisited</h3>
+            <p style={{ fontFamily: contentPreview.family }}>
+              Enter your email to get occasional posts, selected work, and updates from this journal. Clean screen
+              typography should stay readable at article length.
+            </p>
+          </div>
+          <footer>
+            <small>{notice}</small>
+            <div className="settings-logo-actions">
+              <button
+                type="button"
+                className="settings-reset"
+                onClick={() => {
+                  setPostContentFont(DEFAULT_POST_CONTENT_FONT);
+                  setPostHeadingFont(DEFAULT_POST_HEADING_FONT);
+                  void savePostFonts(DEFAULT_POST_CONTENT_FONT, DEFAULT_POST_HEADING_FONT);
+                }}
+              >
+                Use Ranade defaults
+              </button>
+              <button type="submit">Save fonts</button>
+            </div>
+          </footer>
+        </form>
+      </section>
 
       <section className="settings-section">
         <div className="settings-section-heading">
