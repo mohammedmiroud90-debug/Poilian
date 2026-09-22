@@ -274,7 +274,7 @@ export function HomeHero({ authorAvatarUrl }: { authorAvatarUrl: string }) {
             </Link>
           </div>
         </div>
-        <Image className="hero-right-image" src="/heroright2.png" alt="" width={520} height={520} priority />
+        <Image className="hero-right-image" src="/heroimage.png" alt="" width={520} height={520} priority />
         <aside className={`home-chat${chatOpen ? " is-open" : ""}`} aria-label={text.chatTitle}>
           {chatOpen && (
             <div className="home-chat-panel">
