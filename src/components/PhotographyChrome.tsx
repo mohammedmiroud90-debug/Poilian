@@ -235,7 +235,7 @@ const footerCopy = {
       { href: "/about", label: "About" },
       { href: "/en", label: "Home" },
       { href: "/services", label: "Services" },
-      { href: "/market", label: "Market" },
+      { href: "https://market.bitt-i.com", label: "Market", external: true },
     ],
     legalLinks: [
       { href: "/privacy", label: "Privacy" },
@@ -271,7 +271,7 @@ const footerCopy = {
       { href: "/about", label: "À propos" },
       { href: "/en", label: "Accueil" },
       { href: "/services", label: "Services" },
-      { href: "/market", label: "Marché" },
+      { href: "https://market.bitt-i.com", label: "Marché", external: true },
     ],
     legalLinks: [
       { href: "/privacy", label: "Confidentialité" },
@@ -307,7 +307,7 @@ const footerCopy = {
       { href: "/about", label: "من أنا" },
       { href: "/en", label: "الرئيسية" },
       { href: "/services", label: "الخدمات" },
-      { href: "/market", label: "السوق" },
+      { href: "https://market.bitt-i.com", label: "السوق", external: true },
     ],
     legalLinks: [
       { href: "/privacy", label: "الخصوصية" },
@@ -346,9 +346,15 @@ export function PhotographyFooter() {
             <section key={column.title}>
               <h3>{column.title}</h3>
               {column.links.map((link) => (
-                <Link key={link.href + link.label} href={link.href}>
-                  {link.label}
-                </Link>
+                "external" in link && link.external ? (
+                  <a key={link.href + link.label} href={link.href} target="_blank" rel="noreferrer">
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link key={link.href + link.label} href={link.href}>
+                    {link.label}
+                  </Link>
+                )
               ))}
             </section>
           ))}

@@ -43,6 +43,9 @@ export function SettingsManager({
   const [content, setContent] = useState("");
   const [notice, setNotice] = useState("");
   const [uploading, setUploading] = useState<UploadKind | "">("");
+  const [logoWidth, setLogoWidth] = useState(200);
+  const [logoHeight, setLogoHeight] = useState(200);
+  const [maintainAspectRatio, setMaintainAspectRatio] = useState(true);
 
   const previewFontsHref = useMemo(
     () => googleFontsStylesheetUrl([postContentFont, postHeadingFont]),
@@ -105,30 +108,73 @@ export function SettingsManager({
     );
   }
 
+  async function processAndResizeImage(file: File, targetWidth: number, targetHeight: number): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      img.onload = () => {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to process image'));
+            }
+          }, file.type, 0.9);
+        } else {
+          reject(new Error('Failed to get canvas context'));
+        }
+      };
+      
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
   async function upload(kind: UploadKind, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
     setUploading(kind);
-    setNotice("Uploading image…");
-    const form = new FormData();
-    form.set("image", file);
-    const response = await fetch("/api/admin/profile/upload", { method: "POST", body: form });
-    const result = (await response.json()) as { url?: string; error?: string };
-    if (response.ok && result.url) {
-      if (kind === "banner") {
-        setImage(result.url);
-        await saveBanner(result.url);
-      } else if (kind === "logo") {
-        setLogo(result.url);
-        await saveLogo(result.url);
-      } else if (kind === "favicon") {
-        setFavicon(result.url);
-        await saveFavicon(result.url);
-      } else {
-        setCommentAvatar(result.url);
-        await saveCommentAvatar(result.url);
+    setNotice("Processing image…");
+    
+    try {
+      let processedFile = file;
+      
+      // Resize logo if needed
+      if (kind === "logo" && (logoWidth !== 200 || logoHeight !== 200)) {
+        processedFile = await processAndResizeImage(file, logoWidth, logoHeight) as File;
+        setNotice("Uploading resized image…");
       }
-    } else setNotice(result.error || "Image upload failed.");
+      
+      const form = new FormData();
+      form.set("image", processedFile);
+      const response = await fetch("/api/admin/profile/upload", { method: "POST", body: form });
+      const result = (await response.json()) as { url?: string; error?: string };
+      if (response.ok && result.url) {
+        if (kind === "banner") {
+          setImage(result.url);
+          await saveBanner(result.url);
+        } else if (kind === "logo") {
+          setLogo(result.url);
+          await saveLogo(result.url);
+        } else if (kind === "favicon") {
+          setFavicon(result.url);
+          await saveFavicon(result.url);
+        } else {
+          setCommentAvatar(result.url);
+          await saveCommentAvatar(result.url);
+        }
+      } else setNotice(result.error || "Image upload failed.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Image processing failed.");
+    }
+    
     setUploading("");
     event.target.value = "";
   }
@@ -302,7 +348,7 @@ export function SettingsManager({
           <div>
             <p className="section-label">BRANDING</p>
             <h2>Site logo</h2>
-            <p>Upload an image to replace the logo in the header, footer and admin.</p>
+            <p>Upload an image to replace the logo in the header, footer and admin. Resize before upload for optimal performance.</p>
           </div>
         </header>
         <form
@@ -312,12 +358,166 @@ export function SettingsManager({
           }}
         >
           <div className="settings-logo-preview">
-            <img src={logo} alt="Site logo preview" />
+            <img 
+              src={logo} 
+              alt="Site logo preview" 
+              style={{ maxWidth: '300px', maxHeight: '300px' }}
+            />
           </div>
           <label>
             Logo image URL
             <input value={logo} onChange={(event) => setLogo(event.target.value)} required />
           </label>
+          
+          <div className="settings-logo-size-controls">
+            <p className="settings-size-label">Logo size (pixels)</p>
+            <div className="settings-size-inputs">
+              <label>
+                Width
+                <input
+                  type="number"
+                  min="50"
+                  max="1000"
+                  value={logoWidth}
+                  onChange={(event) => {
+                    const newWidth = parseInt(event.target.value) || 200;
+                    setLogoWidth(newWidth);
+                    if (maintainAspectRatio) {
+                      // Calculate aspect ratio from current logo dimensions
+                      const aspectRatio = logoHeight / logoWidth;
+                      setLogoHeight(Math.round(newWidth * aspectRatio));
+                    }
+                  }}
+                />
+              </label>
+              <label>
+                Height
+                <input
+                  type="number"
+                  min="50"
+                  max="1000"
+                  value={logoHeight}
+                  onChange={(event) => {
+                    const newHeight = parseInt(event.target.value) || 200;
+                    setLogoHeight(newHeight);
+                    if (maintainAspectRatio) {
+                      // Calculate aspect ratio from current logo dimensions
+                      const aspectRatio = logoWidth / logoHeight;
+                      setLogoWidth(Math.round(newHeight * aspectRatio));
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <label className="settings-checkbox">
+              <input
+                type="checkbox"
+                checked={maintainAspectRatio}
+                onChange={(event) => setMaintainAspectRatio(event.target.checked)}
+              />
+              Maintain aspect ratio
+            </label>
+            <div className="settings-preset-sizes">
+              <button
+                type="button"
+                className="settings-preset-btn"
+                onClick={() => {
+                  setLogoWidth(100);
+                  setLogoHeight(100);
+                }}
+              >
+                Small (100×100)
+              </button>
+              <button
+                type="button"
+                className="settings-preset-btn"
+                onClick={() => {
+                  setLogoWidth(200);
+                  setLogoHeight(200);
+                }}
+              >
+                Medium (200×200)
+              </button>
+              <button
+                type="button"
+                className="settings-preset-btn"
+                onClick={() => {
+                  setLogoWidth(400);
+                  setLogoHeight(400);
+                }}
+              >
+                Large (400×400)
+              </button>
+            </div>
+          </div>
+          
+          <style jsx>{`
+            .settings-logo-size-controls {
+              margin-top: 1.5rem;
+              padding: 1rem;
+              background: #f5f5f5;
+              border-radius: 8px;
+            }
+            
+            .settings-size-label {
+              font-weight: 600;
+              margin-bottom: 0.75rem;
+              color: #333;
+            }
+            
+            .settings-size-inputs {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+              margin-bottom: 1rem;
+            }
+            
+            .settings-size-inputs label {
+              display: flex;
+              flex-direction: column;
+              gap: 0.25rem;
+            }
+            
+            .settings-size-inputs input {
+              padding: 0.5rem;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+            }
+            
+            .settings-checkbox {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              margin-bottom: 1rem;
+              cursor: pointer;
+            }
+            
+            .settings-checkbox input {
+              width: auto;
+            }
+            
+            .settings-preset-sizes {
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: wrap;
+            }
+            
+            .settings-preset-btn {
+              padding: 0.5rem 1rem;
+              background: white;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 0.875rem;
+              transition: all 0.2s;
+            }
+            
+            .settings-preset-btn:hover {
+              background: #f0f0f0;
+              border-color: #ccc;
+            }
+          `}</style>
+          
           <label className="settings-upload">
             Upload a logo image
             <input
@@ -326,7 +526,7 @@ export function SettingsManager({
               onChange={(event) => void upload("logo", event)}
               disabled={Boolean(uploading)}
             />
-            <span>{uploading === "logo" ? "Uploading…" : "Choose image"}</span>
+            <span>{uploading === "logo" ? "Processing & uploading…" : "Choose image"}</span>
           </label>
           <footer>
             <small>{notice}</small>
@@ -337,6 +537,8 @@ export function SettingsManager({
                 disabled={Boolean(uploading)}
                 onClick={() => {
                   setLogo(defaultLogoUrl);
+                  setLogoWidth(200);
+                  setLogoHeight(200);
                   void saveLogo(defaultLogoUrl);
                 }}
               >

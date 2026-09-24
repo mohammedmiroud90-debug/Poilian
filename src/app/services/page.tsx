@@ -22,6 +22,8 @@ export const metadata: Metadata = {
     description:
       "Research, writing and creative collaboration from Bitt-i.com — focused work for thoughtful projects.",
     images: ["/Bitti.png"],
+    site: "@bitticom",
+    creator: "@bitticom",
   },
 };
 
@@ -59,14 +61,35 @@ const services = [
 ];
 
 export default function ServicesPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Services",
+        item: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"}/services`,
+      },
+    ],
+  };
+
   return (
-    <main className="standalone-page bitti-board bitti-services">
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <main className="standalone-page bitti-board bitti-services">
       <div className="bitti-board-brand">
         <Link href="/en" className="bitti-brand-mark" aria-label="Bitt-i.com home">
           <SiteLogo alt="Bitt-i.com" width={168} height={44} />
         </Link>
         <nav aria-label="Standalone links">
-          <Link href="/market">Marketplace</Link>
+          <a href="https://market.bitt-i.com" target="_blank" rel="noreferrer">Marketplace</a>
           <Link href="/contact">Contact</Link>
         </nav>
       </div>
@@ -150,5 +173,6 @@ export default function ServicesPage() {
         </Link>
       </section>
     </main>
+    </>
   );
 }

@@ -6,9 +6,37 @@ import { postCategories, postsInCategory } from "@/lib/categories";
 import { getAuthorProfile } from "@/lib/profile";
 
 export const metadata: Metadata = {
-  title: "Posts",
-  description: "Notes, research and thoughtful writing from the Bitt-i.com journal.",
+  title: "Posts | Bitt-i.com",
+  description: "Explore our collection of thoughtful articles, research papers, and personal writing. Discover insights on technology, business, creativity, and more at Bitt-i.com.",
+  keywords: "blog posts, articles, research, writing, technology, business, creativity, insights",
   alternates: { canonical: "/posts" },
+  openGraph: {
+    type: "website",
+    url: "/posts",
+    siteName: "Bitt-i.com",
+    title: "Posts | Bitt-i.com",
+    description: "Explore our collection of thoughtful articles, research papers, and personal writing. Discover insights on technology, business, creativity, and more.",
+    images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Posts | Bitt-i.com",
+    description: "Explore our collection of thoughtful articles, research papers, and personal writing.",
+    images: ["/Bitti.png"],
+    site: "@bitticom",
+    creator: "@bitticom",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 const perPage = 6;
@@ -56,8 +84,28 @@ export default async function PostsPage({
       ? `${allPosts.length} matching post${allPosts.length === 1 ? "" : "s"}.`
       : "Notes, research and thoughtful writing from my personal journal.";
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Posts",
+        item: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"}/posts`,
+      },
+    ],
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <BlogHeader />
       <main className="content-page posts-index">
         <header className="posts-index-hero">

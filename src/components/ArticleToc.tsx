@@ -20,10 +20,25 @@ export function ArticleToc({ headings }: { headings: TocHeading[] }) {
 
   return (
     <nav className="article-toc" aria-label="Table of contents">
-      <strong>Table of Contents</strong>
-      {headings.map((heading) => <a className={activeId === heading.id ? "active" : ""} href={`#${heading.id}`} key={heading.id} onClick={() => setActiveId(heading.id)}>{heading.value}</a>)}
+      <div className="toc-header">
+        <strong>Contents</strong>
+        <span className="toc-count">{headings.length}</span>
+      </div>
+      <div className="toc-list">
+        {headings.map((heading) => (
+          <a 
+            className={`toc-item ${activeId === heading.id ? "active" : ""} ${heading.level ? `toc-level-${heading.level}` : ""}`} 
+            href={`#${heading.id}`} 
+            key={heading.id} 
+            onClick={() => setActiveId(heading.id)}
+          >
+            <span className="toc-item-text">{heading.value}</span>
+            {activeId === heading.id && <span className="toc-indicator">●</span>}
+          </a>
+        ))}
+      </div>
       <section className="toc-new" aria-label="New article">
-        <span>New</span>
+        <span className="toc-new-label">Featured</span>
         <a href={newArticle.href}>{newArticle.title}</a>
       </section>
     </nav>

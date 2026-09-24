@@ -57,9 +57,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = await getPost(slug);
   if (!post) return { title: "Post not found", robots: { index: false, follow: false } };
   const description = post.excerpt || `Read ${post.title} on ${SITE_NAME}.`;
+  const keywords = post.category.split(/[,/|]/).map((tag) => tag.trim()).filter(Boolean);
+  const authorProfile = await getAuthorProfile();
+  
   return {
     title: post.title,
     description,
+    keywords: keywords.join(", "),
     alternates: { canonical: `/posts/${post.slug}` },
     openGraph: {
       type: "article",
@@ -68,14 +72,30 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
       siteName: SITE_NAME,
       publishedTime: post.publishedAt,
-      authors: [post.author],
-      images: [DEFAULT_OG_IMAGE],
+      modifiedTime: post.updatedAt,
+      authors: [post.author || authorProfile.name],
+      section: post.category,
+      tags: keywords,
+      images: post.coverImage ? [{ url: post.coverImage, width: 1200, height: 630, alt: post.title }] : [DEFAULT_OG_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description,
-      images: [DEFAULT_OG_IMAGE.url],
+      images: post.coverImage ? [post.coverImage] : [DEFAULT_OG_IMAGE.url],
+      creator: authorProfile.linkedinUrl?.split("/").pop() || "@bitticom",
+      site: "@bitticom",
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
     },
   };
 }
@@ -218,20 +238,79 @@ export default async function PostPage({
   const tags = post.category.split(/[,/|]/).map((tag) => tag.trim()).filter(Boolean);
   const usesTanklager = ["cybersecurity-in-the-age-of-ai-defending-against-intelligent-threats", "the-devops-handbook-revisited-modern-practices-for-continuous-delivery"].includes(post.slug);
   const description = post.excerpt || `Read ${post.title} on ${SITE_NAME}.`;
+  const minutesToRead = readingTime(post.contentHtml || post.content || "");
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    description,
-    datePublished: post.publishedAt,
-    author: { "@type": "Person", name: post.author || authorProfile.name },
-    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL, logo: { "@type": "ImageObject", url: `${SITE_URL}${DEFAULT_OG_IMAGE.url}` } },
-    mainEntityOfPage: `${SITE_URL}/posts/${post.slug}`,
-    articleSection: post.category,
-    keywords: tags,
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        headline: post.title,
+        description,
+        datePublished: post.publishedAt,
+        dateModified: post.updatedAt || post.publishedAt,
+        author: {
+          "@type": "Person",
+          name: post.author || authorProfile.name,
+          url: `${SITE_URL}/pages/founder`,
+          image: authorProfile.avatarUrl,
+          description: authorProfile.bio,
+          sameAs: authorProfile.linkedinUrl ? [authorProfile.linkedinUrl] : undefined,
+        },
+        publisher: {
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: SITE_URL,
+          logo: {
+            "@type": "ImageObject",
+            url: `${SITE_URL}${DEFAULT_OG_IMAGE.url}`,
+            width: DEFAULT_OG_IMAGE.width,
+            height: DEFAULT_OG_IMAGE.height,
+          },
+        },
+        mainEntityOfPage: `${SITE_URL}/posts/${post.slug}`,
+        articleSection: post.category,
+        keywords: tags,
+        inLanguage: "en-US",
+        wordCount: post.contentHtml?.replace(/<[^>]+>/g, "").split(/\s+/).filter(Boolean).length || post.content.split(/\s+/).filter(Boolean).length,
+        timeRequired: `PT${minutesToRead}M`,
+        image: post.coverImage ? {
+          "@type": "ImageObject",
+          url: post.coverImage,
+          width: 1200,
+          height: 630,
+        } : {
+          "@type": "ImageObject",
+          url: `${SITE_URL}${DEFAULT_OG_IMAGE.url}`,
+          width: DEFAULT_OG_IMAGE.width,
+          height: DEFAULT_OG_IMAGE.height,
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: SITE_URL,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Posts",
+            item: `${SITE_URL}/posts`,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: post.title,
+            item: `${SITE_URL}/posts/${post.slug}`,
+          },
+        ],
+      },
+    ],
   };
   
-  const minutesToRead = readingTime(post.contentHtml || post.content || "");
   let processedHtmlContent = post.contentHtml;
   if (hasHtmlContent && headings.length > 0) {
     let headingIndex = 0;
@@ -257,7 +336,13 @@ export default async function PostPage({
     if (block.kind === "image") {
       return (
         <figure className="post-image" key={index}>
-          <img src={block.value} alt={block.alt || ""} loading="lazy" />
+          <img 
+            src={block.value} 
+            alt={block.alt || `Image for ${post!.title}`} 
+            loading="lazy" 
+            width={1200}
+            height={630}
+          />
           {block.alt && <figcaption>{block.alt}</figcaption>}
         </figure>
       );
@@ -379,19 +464,102 @@ export default async function PostPage({
         <section className="post-reading-layout">
           {article}
           <div className="post-reading-sidebar">
+            <aside className="post-marketplace-card" aria-label="Visit our marketplace">
+              <a className="marketplace-promotion" href="https://market.bitt-i.com" target="_blank" rel="noreferrer">
+                <img src="https://corporate.target.com/getmedia/d2441ab3-7b0b-4bff-9a6f-15df4690559d/New-Stores_Header_Target.png" alt="Bitt-i Marketplace - Discover unique products and services" width={600} height={400} />
+                <div className="marketplay-button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" fill="currentColor" />
+                  </svg>
+                </div>
+                <div className="marketplace-content">
+                  <span className="marketplace-title">Why the First Mile is Like Monday Mornings</span>
+                  <span className="marketplace-author">Benjamin Thomas</span>
+                </div>
+              </a>
+            </aside>
             <aside className="post-toc-sidebar">
               <ArticleToc headings={headings.length > 0 ? headings.map(({ id, value, level }) => ({ id: id!, value, level })) : []} />
             </aside>
             <ContributeCard />
             <aside className="post-promotion-sidebar" aria-label="Work with Poilian">
               <a className="toc-promotion" href="/contact">
-                <img src={authorProfile.promotionImage} alt="Work with Poilian" />
+                <img src={authorProfile.promotionImage} alt={`Work with ${authorProfile.name} - Professional services and collaboration`} width={400} height={300} />
                 <span>Work with Poilian <b>↗</b></span>
               </a>
             </aside>
           </div>
         </section>
         {similarPosts.length > 0 && <section className="similar-posts" aria-labelledby="similar-posts-title"><p className="section-label">KEEP READING</p><h2 id="similar-posts-title">Similar posts</h2><div>{similarPosts.map((item) => <Link href={`/posts/${item.slug}`} key={item.id}>{item.title} <span aria-hidden="true">↗</span></Link>)}</div></section>}
+        
+        {/* Table of Contents for Similar Posts */}
+        {headings.length > 0 && (
+          <section className="similar-posts-contents" aria-labelledby="similar-posts-contents-title">
+            <p className="section-label">CONTENTS</p>
+            <h2 id="similar-posts-contents-title">Article Contents</h2>
+            <div className="similar-posts-contents-list">
+              {headings.map((heading) => (
+                <a 
+                  key={heading.id} 
+                  href={`#${heading.id}`}
+                  className={`toc-item ${heading.level ? `toc-level-${heading.level}` : ''}`}
+                >
+                  {heading.value}
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+        
+        {/* Marketplace Podcast Banner */}
+        <section className="marketplace-podcast-banner" aria-label="Marketplace Podcasts">
+          <div className="podcast-banner-grid">
+            <a className="podcast-card" href="https://market.bitt-i.com" target="_blank" rel="noreferrer">
+              <div className="podcast-card-image">
+                <img src="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=400&h=300&fit=crop" alt="Samantha William - Podcast host and business expert" width={400} height={300} />
+                <div className="podcast-play-button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" fill="currentColor" />
+                  </svg>
+                </div>
+              </div>
+              <div className="podcast-card-content">
+                <div className="podcast-meta">
+                  <span className="podcast-duration">38:32</span>
+                  <span className="podcast-category">Morning Talk</span>
+                </div>
+                <h3 className="podcast-title">Running Away From My Problems, and Into Solutions</h3>
+                <div className="podcast-author">
+                  <span className="author-name">Samantha William</span>
+                  <span className="author-info">3 years old - Business topics</span>
+                </div>
+              </div>
+            </a>
+            
+            <a className="podcast-card" href="https://market.bitt-i.com" target="_blank" rel="noreferrer">
+              <div className="podcast-card-image">
+                <img src="https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?w=400&h=300&fit=crop" alt="Benjamin Thomas - Technology podcast host and expert" width={400} height={300} />
+                <div className="podcast-play-button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" fill="currentColor" />
+                  </svg>
+                </div>
+              </div>
+              <div className="podcast-card-content">
+                <div className="podcast-meta">
+                  <span className="podcast-duration">45:18</span>
+                  <span className="podcast-category">Tech Insights</span>
+                </div>
+                <h3 className="podcast-title">Running, Life, and Learning to Slow Down</h3>
+                <div className="podcast-author">
+                  <span className="author-name">Benjamin Thomas</span>
+                  <span className="author-info">2 years old - Technology</span>
+                </div>
+              </div>
+            </a>
+          </div>
+        </section>
+        
         <PostAuthor author={authorProfile.name} bio={authorProfile.bio} avatarUrl={authorProfile.avatarUrl} />
         <CommentSection postId={post.id} initialComments={comments} />
       </main>

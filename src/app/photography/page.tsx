@@ -6,25 +6,37 @@ import { PhotographyFooter, PhotographyHeader } from "@/components/PhotographyCh
 import { PhotographyFrames, type FrameImage } from "@/components/PhotographyFrames";
 
 export const metadata: Metadata = {
-  title: "Photography",
-  description:
-    "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed.",
+  title: "Photography | Bitt-i.com",
+  description: "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed. Travel documentation, professional milestones, and visual storytelling.",
+  keywords: "photography, black and white, travel, career, documentation, visual storytelling, Belhachemia Mohammed",
   alternates: { canonical: "/photography" },
   openGraph: {
     title: "Photography | Bitt-i.com",
-    description:
-      "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed.",
+    description: "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed.",
     type: "website",
     url: "/photography",
     siteName: "Bitt-i.com",
     images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }],
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
     title: "Photography | Bitt-i.com",
-    description:
-      "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed.",
+    description: "Trips, frames and career moments — a black-and-white photography journal by Belhachemia Mohammed.",
     images: ["/Bitti.png"],
+    site: "@bitticom",
+    creator: "@bitticom",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -147,8 +159,29 @@ function TimelineIcon() {
 export default async function PhotographyPage() {
   const images = await loadPhotographyImages();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Photography",
+        item: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"}/photography`,
+      },
+    ],
+  };
+
   return (
-    <div className="standalone-page photo-journey">
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <div className="standalone-page photo-journey">
       <PhotographyHeader />
       <main>
         <header className="photo-journey-hero">
@@ -260,5 +293,6 @@ export default async function PhotographyPage() {
       </main>
       <PhotographyFooter />
     </div>
+    </>
   );
 }

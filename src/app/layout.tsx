@@ -43,45 +43,90 @@ function iconHref(faviconUrl: string) {
 export async function generateMetadata(): Promise<Metadata> {
   const profile = await getAuthorProfile();
   const favicon = iconHref(profile.faviconUrl);
+  const origin = siteOrigin();
   return {
-    metadataBase: new URL(siteOrigin()),
+    metadataBase: new URL(origin),
     title: {
       default: `${SITE_NAME} | Stories, Services & Marketplace`,
       template: `%s | ${SITE_NAME}`,
     },
-    description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
+    description: "Discover thoughtful stories, in-depth research, professional services, and marketplace experiences at Bitt-i.com. Your destination for quality content and creative collaboration.",
+    keywords: "blog, research, services, marketplace, stories, writing, photography, creative collaboration, Bitt-i",
     applicationName: SITE_NAME,
+    authors: [{ name: profile.name, url: `${origin}/pages/founder` }],
+    creator: profile.name,
+    publisher: SITE_NAME,
+    alternates: {
+      canonical: "/",
+      languages: {
+        "en-US": "/en",
+        "fr-FR": "/espace",
+        "ar-SA": "/",
+      },
+    },
     openGraph: {
       type: "website",
       locale: "en_US",
       siteName: SITE_NAME,
       title: `${SITE_NAME} | Stories, Services & Marketplace`,
-      description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
+      description: "Discover thoughtful stories, in-depth research, professional services, and marketplace experiences at Bitt-i.com.",
       images: [DEFAULT_OG_IMAGE],
+      url: siteOrigin(),
     },
     twitter: {
       card: "summary_large_image",
       title: `${SITE_NAME} | Stories, Services & Marketplace`,
-      description: "Stories, research, services and marketplace experiences from Bitt-i.com.",
+      description: "Discover thoughtful stories, in-depth research, professional services, and marketplace experiences at Bitt-i.com.",
       images: [DEFAULT_OG_IMAGE.url],
+      creator: profile.linkedinUrl?.split("/").pop() || "@bitticom",
     },
     icons: {
       icon: [{ url: favicon }],
       shortcut: favicon,
       apple: favicon,
     },
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: SITE_NAME,
+    },
+    formatDetection: {
+      telephone: false,
+    },
     robots: {
       index: true,
       follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+    verification: {
+      google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION,
+    },
+    other: {
+      ...(process.env.NEXT_PUBLIC_FACEBOOK_APP_ID && { "fb:app_id": process.env.NEXT_PUBLIC_FACEBOOK_APP_ID }),
+      ...(process.env.NEXT_PUBLIC_FACEBOOK_PAGE_ID && { "fb:pages": process.env.NEXT_PUBLIC_FACEBOOK_PAGE_ID }),
     },
   };
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const profile = await getAuthorProfile();
+  const favicon = iconHref(profile.faviconUrl);
   return (
     <html lang="en" className={openSans.variable} suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
+        <meta property="linkedin:owner" content={profile.linkedinUrl || ""} />
+        <meta property="linkedin:company" content="bitt-i" />
+        <meta name="author" content={profile.name} />
+        <meta name="article:author" content={profile.name} />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var m=document.cookie.match(/poilian-locale=(en|fr|ar)/);if(m){document.documentElement.lang=m[1];document.documentElement.dir=m[1]==='ar'?'rtl':'ltr';}}catch(e){}})();`,

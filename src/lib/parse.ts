@@ -1,6 +1,6 @@
 import { allowedIframeSrc } from "@/lib/embed";
 
-export type Post = { id: string; slug: string; title: string; excerpt: string; content: string; contentHtml?: string; author: string; publishedAt: string; category: string; className?: "Article" | "BlogPost"; audioUrl?: string };
+export type Post = { id: string; slug: string; title: string; excerpt: string; content: string; contentHtml?: string; author: string; publishedAt: string; category: string; className?: "Article" | "BlogPost"; audioUrl?: string; updatedAt?: string; coverImage?: string };
 export type Comment = { id: string; author: string; content: string; createdAt: string; parentId?: string; avatarUrl?: string; likeCount?: number; className?: "Comment" | "BlogComment"; postId?: string };
 export type AnalyticsSummary = { posts: number; comments: number; views: number; viewsThisWeek: number; latestPost?: Post; topPosts: { title: string; slug: string; views: number }[]; activity: { date: string; views: number }[] };
 
@@ -74,6 +74,8 @@ const mapPost = (item: Record<string, unknown>, className?: "Article" | "BlogPos
     category: text(item.category || item.type) || "Personal notes",
     className,
     audioUrl: text(item.audioUrl) || undefined,
+    updatedAt: dateText(item.updatedAt) || undefined,
+    coverImage: text(item.coverImage || item.image) || undefined,
   };
 };
 

@@ -226,7 +226,12 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
           </button>
           
           <Link className="page-header-logo" href="/en">
-            <SiteLogo alt="Bitt-i.com" width={158} height={40} priority />
+            <SiteLogo 
+              alt="Bitt-i.com" 
+              width={isPostView && scrolled ? 160 : 120} 
+              height={isPostView && scrolled ? 40 : 30} 
+              priority 
+            />
           </Link>
         </div>
 
@@ -299,6 +304,19 @@ export function BlogHeader({ pages: initialPages = [], category, audioUrl }: { p
               <path d="m15.2 15.2 4.2 4.2" />
             </svg>
           </button>
+          
+          <a 
+            className="header-marketplace" 
+            href="https://market.birr-i.com" 
+            target="_blank" 
+            rel="noreferrer" 
+            aria-label="Visit Marketplace"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Marketplace</span>
+          </a>
           
           <a 
             className="header-linkedin" 

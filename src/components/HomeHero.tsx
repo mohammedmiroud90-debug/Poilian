@@ -192,7 +192,7 @@ export function HomeHero({ authorAvatarUrl }: { authorAvatarUrl: string }) {
       <div className="personal-shell">
         <header className="personal-topbar">
           <Link className="personal-logo" href="/en">
-            <SiteLogo alt="Poilian" width={190} height={78} priority />
+            <SiteLogo alt="Poilian" width={120} height={50} priority />
           </Link>
           <div className="personal-account">
             <LanguageSelect value={locale} onLocaleChange={setLocale} />
@@ -210,9 +210,9 @@ export function HomeHero({ authorAvatarUrl }: { authorAvatarUrl: string }) {
             >
               {text.subscribe}
             </button>
-            <Link href="/market" className="hero-market-link">
+            <a href="https://market.bitt-i.com" className="hero-market-link" target="_blank" rel="noreferrer">
               {text.market} <span>↗</span>
-            </Link>
+            </a>
             <a className="linkedin-link" href="https://www.linkedin.com" target="_blank" rel="noreferrer">
               in
             </a>

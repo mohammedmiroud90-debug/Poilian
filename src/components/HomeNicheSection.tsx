@@ -210,7 +210,6 @@ export function HomeNicheSection() {
                   style={{
                     ["--i" as string]: index,
                     ["--w" as string]: `${width}px`,
-                    ["--hue" as string]: String(228 - t * 18),
                   }}
                 >
                   <b className="face face-top" />

@@ -3,25 +3,37 @@ import Link from "next/link";
 import { SiteLogo } from "@/components/SiteLogo";
 
 export const metadata: Metadata = {
-  title: "Marketplace",
-  description:
-    "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace.",
+  title: "Marketplace | Bitt-i.com",
+  description: "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace. Quality goods, skilled professionals, and meaningful connections.",
+  keywords: "marketplace, products, services, local talent, community, curated, quality goods, professionals",
   alternates: { canonical: "/market" },
   openGraph: {
     type: "website",
     url: "/market",
     siteName: "Bitt-i.com",
     title: "Marketplace | Bitt-i.com",
-    description:
-      "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace.",
+    description: "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace.",
     images: [{ url: "/Bitti.png", width: 466, height: 143, alt: "Bitt-i.com" }],
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
     title: "Marketplace | Bitt-i.com",
-    description:
-      "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace.",
+    description: "Discover curated products, local services and community opportunities on the Bitt-i.com marketplace.",
     images: ["/Bitti.png"],
+    site: "@bitticom",
+    creator: "@bitticom",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -53,8 +65,29 @@ const listings = [
 ];
 
 export default function MarketPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Marketplace",
+        item: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitt-i.com"}/market`,
+      },
+    ],
+  };
+
   return (
-    <main className="standalone-page bitti-board">
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <main className="standalone-page bitti-board">
       <div className="bitti-board-brand">
         <Link href="/en" className="bitti-brand-mark" aria-label="Bitt-i.com home">
           <SiteLogo alt="Bitt-i.com" width={168} height={44} />
@@ -143,5 +176,6 @@ export default function MarketPage() {
         </Link>
       </section>
     </main>
+    </>
   );
 }

@@ -92,7 +92,7 @@ function CommentAvatar({ src, seed }: { src?: string; seed: string }) {
       style={usesDefault ? { ["--comment-avatar-hue" as string]: `${hueFromSeed(seed)}deg` } : undefined}
       aria-hidden="true"
     >
-      <img src={resolved} alt="" width={32} height={32} />
+      <img src={resolved} alt="User comment avatar" width={32} height={32} />
     </span>
   );
 }

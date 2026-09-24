@@ -4,19 +4,19 @@ import { getSitePages } from "@/lib/pages";
 import { SITE_URL } from "@/lib/seo";
 
 const staticRoutes: { path: string; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"]; priority: number }[] = [
-  { path: "/", changeFrequency: "weekly", priority: 1 },
+  { path: "/", changeFrequency: "daily", priority: 1.0 },
   { path: "/posts", changeFrequency: "daily", priority: 0.9 },
   { path: "/projects", changeFrequency: "weekly", priority: 0.8 },
   { path: "/categories", changeFrequency: "weekly", priority: 0.7 },
-  { path: "/research", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/research", changeFrequency: "weekly", priority: 0.7 },
   { path: "/notes", changeFrequency: "weekly", priority: 0.7 },
-  { path: "/market", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/market", changeFrequency: "daily", priority: 0.8 },
   { path: "/services", changeFrequency: "weekly", priority: 0.8 },
-  { path: "/photography", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/photography", changeFrequency: "weekly", priority: 0.7 },
   { path: "/photographyapply", changeFrequency: "monthly", priority: 0.6 },
   { path: "/ask-me", changeFrequency: "weekly", priority: 0.8 },
   { path: "/search", changeFrequency: "weekly", priority: 0.5 },
-  { path: "/contact", changeFrequency: "yearly", priority: 0.6 },
+  { path: "/contact", changeFrequency: "monthly", priority: 0.6 },
   { path: "/legal", changeFrequency: "yearly", priority: 0.3 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
@@ -35,12 +35,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority,
   }));
 
-  const postEntries: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: `${SITE_URL}/posts/${post.slug}`,
-    lastModified: post.publishedAt ? new Date(post.publishedAt) : now,
-    changeFrequency: "monthly",
-    priority: 0.8,
-  }));
+  const postEntries: MetadataRoute.Sitemap = posts.map((post) => {
+    const isRecent = post.publishedAt && new Date(post.publishedAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    return {
+      url: `${SITE_URL}/posts/${post.slug}`,
+      lastModified: post.publishedAt ? new Date(post.publishedAt) : now,
+      changeFrequency: isRecent ? "weekly" : "monthly",
+      priority: isRecent ? 0.9 : 0.8,
+    };
+  });
 
   const pageEntries: MetadataRoute.Sitemap = pages
     .filter((page) => page.status === "published")

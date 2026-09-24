@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { type Locale } from "@/components/LanguageSelect";
 import { usePoilianLocale } from "@/hooks/usePoilianLocale";
 import { HomeNicheSection } from "@/components/HomeNicheSection";
-import { ServicesShowcase } from "@/components/ServicesShowcase";
+import { MarketplaceCTA } from "@/components/MarketplaceCTA";
 import type { Post } from "@/lib/parse";
 
 const copy: Record<
@@ -105,7 +105,7 @@ export function HomePostList({ posts, authorName }: { posts: Post[]; authorName:
       </section>
 
       <HomeNicheSection />
-      <ServicesShowcase />
+      <MarketplaceCTA />
     </>
   );
 }
